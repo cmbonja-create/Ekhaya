@@ -444,7 +444,7 @@ function start(){
   ensureLoop();
 }
 function ensureLoop(){if(!running){running=true;lastT=performance.now();requestAnimationFrame(loop)}}
-function syncBar(){document.querySelectorAll('.bar .sc').forEach(e=>e.style.display=cur&&cur.twoPlayer?'none':'');$('pauseBtn').hidden=!(canPause()&&!titleMode&&!over);$('mute').hidden=!!(cur&&cur.menu);$('nm').style.visibility=(cur&&cur.menu)?'hidden':''}
+function syncBar(){document.querySelectorAll('.bar .sc').forEach(e=>e.style.display=cur&&cur.twoPlayer?'none':'');$('pauseBtn').hidden=!(canPause()&&!titleMode&&!over);$('mute').hidden=!!(cur&&cur.menu);$('nm').style.visibility=(cur&&(cur.menu||!titleMode))?'hidden':''}
 function showTitle(){
   if(cur&&cur.openMenu){titleMode=true;over=false;paused=false;Sfx.engineStop();['over','pause','sheet','title','mEnd'].forEach(id=>$(id).hidden=true);$('hint').classList.add('fade');cur.openMenu();syncBar();ensureLoop();return}
   titleMode=true;over=false;paused=false;Sfx.engineStop();Sfx.hush();
@@ -1404,7 +1404,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
     this.pl=this.seats.map((s,i)=>({n:s.n,h:s.h||null,c:cols[i],skin:skins[i],sw:0,pts:0}));
     this.occ=[1,2,3,0];this.lives=3;this.rallies=0;this.hits=0;this.state='pause';this.timer=1.2;this.ball=null;this.fx=[];
     this.msg='';this.msgT=0;this.msgPid=null;this.msgYou='';this.loc='';this.locT=0;this.t=0;this.wasKing=false;this.done=false;
-    this.ev=[];this.sendT=0;this.snaps=[];this.bid=0;this.bad=0;
+    this.ev=[];this.sendT=0;this.snaps=[];this.bid=0;this.bad=0;this.streak=0;this.trail=[];this.onFire=false;this.gfl=0;
     this.occ.forEach((p,r)=>{const [x,y]=this.home(r);this.pl[p].x=x;this.pl[p].y=y});
   },
   begin(){if(this.mode==='host'){if(this.played)NetHub.all({t:'again'});this.played=true}},
@@ -1434,7 +1434,9 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
   home(r){const q=this.sq(r);return[q.x+q.s/2,q.y+q.s/2]},
   rankAt(x,y){const {S,x0,y0}=this.geo();if(x<x0||y<y0||x>x0+S||y>y0+S)return -1;const c=x<x0+S/2?0:1,rw=y<y0+S/2?0:1;return rw===0?(c===1?0:1):(c===0?2:3)},
   myRank(){return this.occ.indexOf(this.mePid)},
-  speed(){return Math.min(1,this.rallies*0.035+this.hits*0.02)},
+  speed(){return Math.min(1,0.35*Math.min(1,this.rallies*0.03+this.hits*0.015)+this.streak*0.065)},
+  /* the ball catches fire as a rally gets fast: 0 = normal, 1 = full flames */
+  flame(){return this.mode==='guest'?(this.gfl||0):Math.max(0,Math.min(1,(this.speed()-0.45)/0.4))},
   /* sounds play here and, on the host, get sent to the friends' phones too */
   snd(k,a){this.play(k,a);if(this.mode==='host')this.ev.push([k,a??0])},
   play(k,a){
@@ -1442,6 +1444,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
     else if(k==='drop')Sfx.tone(170,.08,{vol:.28,to:95});
     else if(k==='land')Sfx.tone(160,.09,{vol:.3,to:90});
     else if(k==='two')Sfx.tone(140,.08,{vol:.25,to:80});
+    else if(k==='fire'){Sfx.noise(.5,{vol:.22,freq:900,to:3000,type:'bandpass'});Sfx.tone(220,.4,{type:'sawtooth',vol:.05,to:660});this.toast('ON FIRE! 🔥','#ff9a2e')}
     else if(k==='wh'){Sfx.tone(2300,.16,{vol:.07});Sfx.tone(2700,.28,{vol:.07,delay:.18});if(a===this.mePid)Haptic.go('crash')}},
   say(t,col,pid,you){this.msg=t;this.msgT=1.8;this.msgCol=col||'#eef0f7';this.msgPid=pid??null;this.msgYou=you||''},
   msgText(){const p=this.msgPid;if(p==null)return this.msg;if(p===this.mePid)return this.msgYou||('You '+this.msg);return this.pl[p].n+' '+this.msg},
@@ -1468,7 +1471,8 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
       /* the house rule: every hit goes down into your own square first, then carries on to the target */
       b.phase='drop';b.d=0;b.dx0=b.sx;b.dy0=b.sy;
       b.dx1=Math.max(q.x+m,Math.min(q.x+q.s-m,b.sx+(tx-b.sx)*0.18));b.dy1=Math.max(q.y+m,Math.min(q.y+q.s-m,b.sy+(ty-b.sy)*0.18))}
-    hitter.sw=0.3;this.state='play';this.snd('hit',+pow.toFixed(2));
+    hitter.sw=0.3;this.state='play';this.snd('hit',+pow.toFixed(2));this.streak++;
+    const fire=this.flame()>0;if(fire&&!this.onFire)this.snd('fire');this.onFire=fire;
   },
   serve(){const k=this.occ[0];
     if(this.human(k)){this.state='serve';this.say('to serve.',null,k,'Your serve! Serve to JACK.');return}
@@ -1477,8 +1481,10 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
     if(hs.length&&fp!==undefined&&Math.random()<({easy:0.3,normal:0.42,hard:0.6}[store.get('four_lvl','normal')]||0.42))return hs[ri(hs.length)];return opts[ri(opts.length)]},
   update(dt){
     this.t+=dt;this.msgT=Math.max(0,this.msgT-dt);this.locT=Math.max(0,this.locT-dt);
-    if(this.mode==='guest')return this.gUpdate(dt);
-    this.sim(dt);
+    for(const p of this.trail)p.t+=dt;this.trail=this.trail.filter(p=>p.t<0.32);
+    if(this.mode==='guest')this.gUpdate(dt);else this.sim(dt);
+    const fb=this.ball,fl=this.flame();if(fb&&fl>0&&this.state==='play')this.trail.push({x:fb.x+rand(-2,2),y:fb.y-fb.z,t:0});
+    if(this.mode==='guest')return;
     if(this.mode==='host'){this.sendT-=dt;if(this.sendT<=0){this.sendT=0.05;NetHub.all(this.snap())}}
   },
   sim(dt){
@@ -1500,7 +1506,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
         if(b.bad){this.bad++;
           if(this.bad>=3)return this.out(b.from,'served badly 3 times. Out!','Bad serve number 3. You’re out!');
           /* bad serve: the King gets 3 chances before going out */
-          this.ball=null;this.state='pause';this.timer=1.3;this.snd('wh',-1);
+          this.ball=null;this.state='pause';this.timer=1.3;this.snd('wh',-1);this.streak=0;this.onFire=false;
           this.say('served badly! Serve again ('+(3-this.bad)+' left)','#ffc23d',b.from===undefined?null:this.occ[b.from],'Bad serve! Serve again ('+(3-this.bad)+' left)');return}
         if(b.serve)this.bad=0;
         if(b.out)return this.out(b.from,'hit it out!');
@@ -1539,7 +1545,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
     this.hits++;this.addPts(pid,1);this.fxAt(P,'+1');this.launch(me,r,false,[x,y],pow,st);tag();
   },
   out(rank,why,you){
-    const pid=this.occ[rank];this.ball=null;this.bad=0;this.state='pause';this.timer=1.5;this.rallies++;this.snd('wh',pid);
+    const pid=this.occ[rank];this.ball=null;this.bad=0;this.streak=0;this.onFire=false;this.state='pause';this.timer=1.5;this.rallies++;this.snd('wh',pid);
     this.say(why,pid===this.mePid?'#ff6b5a':'#eef0f7',pid,you);
     if(!this.isMP()){
       if(pid===0){this.lives--;if(this.lives<=0){this.state='done';setTimeout(()=>{if(cur===this)end('Out of lives')},900);return}}
@@ -1551,7 +1557,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
   kingCheck(){const king=this.myRank()===0;if(king&&!this.wasKing){this.toast('You are the KING!');[523,659,784,1047].forEach((f,k)=>Sfx.tone(f,.16,{type:'square',vol:.06,delay:k*.1}))}this.wasKing=king},
   /* ---- host -> friends ---- */
   snap(){const {S,x0,y0}=this.geo(),nx=v=>+((v-x0)/S).toFixed(4),ny=v=>+((v-y0)/S).toFixed(4),b=this.ball;
-    return{t:'s',o:this.occ.slice(),st:this.state,P:this.pl.map(p=>[nx(p.x),ny(p.y),+p.sw.toFixed(2),p.pts]),
+    return{t:'s',fl:+this.flame().toFixed(2),o:this.occ.slice(),st:this.state,P:this.pl.map(p=>[nx(p.x),ny(p.y),+p.sw.toFixed(2),p.pts]),
       b:b?{i:b.id,x:nx(b.x),y:ny(b.y),z:+(b.z/S).toFixed(4),ph:b.phase,k:b.phase==='fly'?+(b.t/b.T).toFixed(3):0,u:b.phase==='up'?+Math.min(1,b.u/b.win).toFixed(3):0,
         to:b.to,hp:b.hp,tx:nx(b.tx),ty:ny(b.ty),out:!!b.out}:null,
       m:this.msgT>0?[this.msg,this.msgCol,this.msgPid,this.msgYou,+this.msgT.toFixed(2)]:null,
@@ -1564,7 +1570,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
     if(ss[ss.length-1].at<=rt)a=c=ss[ss.length-1];
     const f=c===a?1:Math.max(0,Math.min(1,(rt-a.at)/(c.at-a.at))),L=(p,q)=>p+(q-p)*f;
     const {S,x0,y0}=this.geo(),X=u=>x0+u*S,Y=v=>y0+v*S;
-    this.occ=c.o;this.state=c.st;
+    this.occ=c.o;this.state=c.st;this.gfl=c.fl||0;
     this.pl.forEach((p,i)=>{const A=a.P[i],C=c.P[i];p.x=X(L(A[0],C[0]));p.y=Y(L(A[1],C[1]));p.sw=C[2];p.pts=C[3]});
     if(this.pl[this.mePid].pts!==score)setScore(this.pl[this.mePid].pts);
     const B=c.b,A=a.b&&B&&a.b.i===B.i?a.b:B;
@@ -1618,7 +1624,19 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for
     const b=this.ball;
     if(b&&b.mine&&b.phase==='fly'){g.strokeStyle=b.out?'#ff6b5a':'#ffc23d';g.lineWidth=2.5;g.beginPath();g.moveTo(b.tx-7,b.ty-7);g.lineTo(b.tx+7,b.ty+7);g.moveTo(b.tx+7,b.ty-7);g.lineTo(b.tx-7,b.ty+7);g.stroke()}
     if(b){const rad=9;g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(b.x,b.y,rad*Math.max(.4,1-b.z/200),rad*0.45*Math.max(.4,1-b.z/200),0,0,7);g.fill();
-      const br=rad*(1+b.z/260),by=b.y-b.z;g.fillStyle='#e0473a';g.beginPath();g.arc(b.x,by,br,0,7);g.fill();g.fillStyle='rgba(255,255,255,.55)';g.beginPath();g.arc(b.x-br*0.35,by-br*0.35,br*0.3,0,7);g.fill();
+      const br=rad*(1+b.z/260),by=b.y-b.z,fl=this.flame();
+      if(fl>0){g.save();
+        for(const p of this.trail){const k=1-p.t/0.32,r=br*(0.45+0.85*k)*(0.7+0.5*fl);
+          g.fillStyle=`rgba(${k>0.6?255:235},${Math.round(40+150*k*k)},0,${0.6*k*fl})`;g.beginPath();g.arc(p.x,p.y-(1-k)*10,r,0,7);g.fill()}
+        g.globalCompositeOperation='lighter';
+        const gl=g.createRadialGradient(b.x,by,br*0.4,b.x,by,br*(2.2+fl));gl.addColorStop(0,`rgba(255,200,60,${0.7*fl})`);gl.addColorStop(1,'rgba(255,80,0,0)');
+        g.fillStyle=gl;g.beginPath();g.arc(b.x,by,br*(2.2+fl),0,7);g.fill();
+        /* flickering flame tongues */
+        for(let i=0;i<5;i++){const a=-Math.PI/2+(i-2)*0.45+Math.sin(this.t*20+i*2)*0.15,h=br*(1.2+0.9*fl)*(0.7+0.3*Math.sin(this.t*31+i*5));
+          g.fillStyle=`rgba(255,${120+i*20},30,${0.6*fl})`;g.beginPath();g.moveTo(b.x+Math.cos(a-0.5)*br*0.8,by+Math.sin(a-0.5)*br*0.8);
+          g.lineTo(b.x+Math.cos(a)*(br+h),by+Math.sin(a)*(br+h));g.lineTo(b.x+Math.cos(a+0.5)*br*0.8,by+Math.sin(a+0.5)*br*0.8);g.fill()}
+        g.restore()}
+      g.fillStyle=fl>0?`rgb(${Math.round(224+31*fl)},${Math.round(71+90*fl)},${Math.round(58-30*fl)})`:'#e0473a';g.beginPath();g.arc(b.x,by,br,0,7);g.fill();g.fillStyle='rgba(255,255,255,.55)';g.beginPath();g.arc(b.x-br*0.35,by-br*0.35,br*0.3,0,7);g.fill();
       if(b.to===me&&b.phase==='up'){const k=Math.max(0,1-b.u/b.win);g.strokeStyle='#ffc23d';g.lineWidth=3;g.beginPath();g.arc(b.x,by,br+6+10*k,0,7);g.stroke()}}
     const bk=b?(b.k??(b.t/b.T)):0;
     const prompt=this.state==='serve'?(me===0?'Serve into the JACK square':''):b&&b.to===me&&this.state==='play'?(b.phase==='up'?'HIT IT NOW!':b.phase==='fly'&&bk>=0.45?'Hit it!':'Get ready…'):'';
