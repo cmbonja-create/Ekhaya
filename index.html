@@ -127,6 +127,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;displa
 .carbtn span{color:var(--muted);font-weight:700;font-size:11px}
 .how{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;line-height:1.4}
 @media (prefers-reduced-motion:reduce){.tcard{animation:none}.card{animation:none}.game{transition:none}}
+.finput{font-family:var(--body,inherit);font-size:17px;background:var(--ink);color:var(--text);border:1.5px solid var(--line);border-radius:14px;padding:12px;width:100%;text-align:center}
+.finput.fcode{font-family:var(--display);font-size:30px;letter-spacing:.2em;text-transform:uppercase}
+#fList{display:flex;flex-direction:column;gap:6px}.fseat{background:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;font-weight:700}.fseat.me{border-color:#ffc23d;color:#ffc23d}
 </style>
 
 </head>
@@ -179,6 +182,55 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;displa
           <h3 id="sheetTitle"></h3>
           <div id="sheetBody" class="set" style="gap:16px"></div>
           <button class="btn sec" id="sheetBack">Back</button>
+        </div>
+      </div>
+      <div class="panel" id="mMenu" hidden>
+        <div class="tcard">
+          <div class="logo" style="font-size:clamp(28px,9vw,38px)">UMLABALABA</div>
+          <p class="tag">Morabaraba for two players. 12 cows each.</p>
+          <div id="mHome" class="set" style="gap:10px">
+            <button class="btn pri big" id="mCpu">PLAY THE COMPUTER</button>
+            <div class="seg" id="mLvl"><button data-v="easy">Easy</button><button data-v="normal">Normal</button><button data-v="hard">Hard</button></div>
+            <button class="btn sec" id="mPass">Pass &amp; play with a friend</button>
+            <div class="row2"><button class="btn sec" id="mHost">Host game</button><button class="btn sec" id="mJoin">Join game</button></div>
+            <button class="btn sec" id="mRules">How to play</button>
+          </div>
+          <div id="mNet" class="set" style="gap:10px" hidden>
+            <p id="mNetMsg" style="margin:0;text-align:center;line-height:1.45"></p>
+            <div id="mCodeBox" class="logo" style="font-size:46px;letter-spacing:.14em" hidden></div>
+            <input id="mCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Game code" hidden
+              style="font-family:var(--display);font-size:30px;text-align:center;letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:var(--text);border:1.5px solid var(--line);border-radius:14px;padding:12px;width:100%">
+            <button class="btn pri" id="mGo" hidden>Join</button>
+            <button class="btn sec" id="mCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="fMenu" hidden>
+        <div class="tcard">
+          <div class="logo" style="font-size:clamp(28px,9vw,38px)">FOUR SQUARE</div>
+          <p class="tag">Stay King. Play the computer, or up to 3 friends on their own phones.</p>
+          <div id="fHome" class="set" style="gap:10px">
+            <button class="btn pri big" id="fSolo">PLAY THE COMPUTER</button>
+            <input id="fName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Your name (for friends)" aria-label="Your name" class="finput">
+            <div class="row2"><button class="btn sec" id="fHost">Host game</button><button class="btn sec" id="fJoin">Join game</button></div>
+          </div>
+          <div id="fNet" class="set" style="gap:10px" hidden>
+            <p id="fNetMsg" style="margin:0;text-align:center;line-height:1.45"></p>
+            <div id="fCodeBox" class="logo" style="font-size:46px;letter-spacing:.14em;text-align:center" hidden></div>
+            <input id="fCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Game code" hidden class="finput fcode">
+            <button class="btn pri" id="fGo" hidden>Join</button>
+            <div id="fList" hidden></div>
+            <button class="btn pri" id="fStart" hidden>START</button>
+            <button class="btn sec" id="fCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="mEnd" hidden>
+        <div class="tcard">
+          <h3 id="mEndT"></h3>
+          <p id="mEndW" style="margin:0;text-align:center;color:var(--muted)"></p>
+          <button class="btn pri" id="mAgain">Play again</button>
+          <button class="btn sec" id="mBack">Menu</button>
         </div>
       </div>
       <div class="over" id="over" hidden>
@@ -361,7 +413,7 @@ function fit(){
 }
 function setScore(n){score=n;$('score').textContent=n}
 let hintTimer=0;
-function showHint(t){const h=$('hint');h.textContent=t;h.classList.remove('fade');clearTimeout(hintTimer);hintTimer=setTimeout(()=>h.classList.add('fade'),3800)}
+function showHint(t){const h=$('hint');if(!t){h.classList.add('fade');return}h.textContent=t;h.classList.remove('fade');clearTimeout(hintTimer);hintTimer=setTimeout(()=>h.classList.add('fade'),3800)}
 
 function end(title){
   if(over)return;over=true;Sfx.engineStop();Sfx.hush();
@@ -385,14 +437,15 @@ function showOver(){
   setTimeout(()=>bs.forEach(x=>x.disabled=(x.id==='revive'&&!x.dataset.ok)),450);
 }
 function start(){
-  over=false;paused=false;titleMode=false;['over','title','pause','sheet'].forEach(id=>$(id).hidden=true);setScore(0);
+  over=false;paused=false;titleMode=false;['over','title','pause','sheet','mMenu','mEnd','fMenu'].forEach(id=>$(id).hidden=true);setScore(0);
   $('bestNow').textContent=store.get(bestKey(cur),0);
   cur.rp=null;cur.init();if(cur.begin)cur.begin();if(cur.onStart)cur.onStart();showHint(cur.hint);lastT=performance.now();syncBar();
   ensureLoop();
 }
 function ensureLoop(){if(!running){running=true;lastT=performance.now();requestAnimationFrame(loop)}}
-function syncBar(){$('pauseBtn').hidden=!(cur&&cur.menu&&!titleMode&&!over);$('mute').hidden=!!(cur&&cur.menu);$('nm').style.visibility=(cur&&cur.menu)?'hidden':''}
+function syncBar(){document.querySelectorAll('.bar .sc').forEach(e=>e.style.display=cur&&cur.twoPlayer?'none':'');$('pauseBtn').hidden=!(cur&&cur.menu&&!titleMode&&!over);$('mute').hidden=!!(cur&&cur.menu);$('nm').style.visibility=(cur&&cur.menu)?'hidden':''}
 function showTitle(){
+  if(cur&&cur.openMenu){titleMode=true;over=false;paused=false;Sfx.engineStop();['over','pause','sheet','title','mEnd'].forEach(id=>$(id).hidden=true);$('hint').classList.add('fade');cur.openMenu();syncBar();ensureLoop();return}
   titleMode=true;over=false;paused=false;Sfx.engineStop();Sfx.hush();
   ['over','pause','sheet'].forEach(id=>$(id).hidden=true);$('hint').classList.add('fade');
   cur.rp=null;cur.init();setScore(0);$('bestNow').textContent=store.get(bestKey(cur),0);
@@ -402,7 +455,7 @@ function pauseGame(){if(!cur||!cur.menu||titleMode||over||paused)return;paused=t
 function resumeGame(){if(!paused)return;paused=false;$('pause').hidden=true;$('sheet').hidden=true;lastT=performance.now();if(cur.onStart)cur.onStart();syncBar()}
 let sheetFrom='title';
 function openSheet(kind,from){sheetFrom=from;$(from).hidden=true;cur.sheet(kind);$('sheet').hidden=false}
-$('sheetBack').onclick=()=>{$('sheet').hidden=true;if(sheetFrom==='title'){cur.fillTitle();$('title').hidden=false}else $('pause').hidden=false};
+$('sheetBack').onclick=()=>{$('sheet').hidden=true;if(sheetFrom==='title'){cur.fillTitle();$('title').hidden=false}else $(sheetFrom).hidden=false};
 $('tPlay').onclick=()=>{Sfx.init();start()};
 $('tGarage').onclick=()=>openSheet('garage','title');
 $('tShop').onclick=()=>openSheet('shop','title');
@@ -423,9 +476,9 @@ function loop(t){
   ctx.clearRect(0,0,W,H);cur.draw(ctx);
   requestAnimationFrame(loop);
 }
-function openGame(g){Sfx.init();cur=g;$('menu').hidden=true;$('play').hidden=false;$('nm').textContent=g.title;fit();if(g.menu)showTitle();else start();}
-function toMenu(){running=false;titleMode=false;paused=false;['title','pause','sheet'].forEach(id=>$(id).hidden=true);Sfx.engineStop();if(cur)cur.rp=null;$('play').hidden=true;$('menu').hidden=false;renderMenu();}
-$('back').onclick=()=>{if(cur&&cur.menu&&!titleMode)showTitle();else toMenu()};$('toMenu').onclick=()=>{if(cur&&cur.menu)showTitle();else toMenu()};$('again').onclick=()=>{Sfx.init();if(cur)cur.rp=null;start()};
+function openGame(g){Sfx.init();cur=g;$('menu').hidden=true;$('play').hidden=false;$('nm').textContent=g.title;fit();if(g.menu||g.openMenu)showTitle();else start();}
+function toMenu(){running=false;titleMode=false;paused=false;['title','pause','sheet','mMenu','mEnd','fMenu'].forEach(id=>$(id).hidden=true);if(cur&&cur.leave)cur.leave();Sfx.engineStop();if(cur)cur.rp=null;$('play').hidden=true;$('menu').hidden=false;renderMenu();}
+$('back').onclick=()=>{if(cur&&(cur.menu||cur.openMenu)&&!titleMode)showTitle();else toMenu()};$('toMenu').onclick=()=>{if(cur&&cur.menu)showTitle();else toMenu()};$('again').onclick=()=>{Sfx.init();if(cur)cur.rp=null;start()};
 $('watch').onclick=()=>{Sfx.init();$('over').hidden=true;cur.startReplay()};
 $('mute').onclick=()=>{Sfx.init();Sfx.setMute(!Sfx.muted);paintMute()};paintMute();
 window.addEventListener('resize',()=>{if(!$('play').hidden){fit();cur&&cur.resize&&cur.resize()}});
@@ -438,7 +491,7 @@ cv.addEventListener('pointerdown',e=>{
   if(over){if(cur.rp){e.preventDefault();cur.stopReplay()}return}
   e.preventDefault();
   const r=cv.getBoundingClientRect();
-  ptr={x:e.clientX,y:e.clientY,used:false};
+  ptr={x:e.clientX,y:e.clientY,used:false,t:performance.now()};
   if(cur.tapOnDown){cur.tap&&cur.tap(e.clientX-r.left,e.clientY-r.top);ptr.used=!cur.swipe;}
 });
 cv.addEventListener('pointermove',e=>{
@@ -448,6 +501,7 @@ cv.addEventListener('pointermove',e=>{
 });
 cv.addEventListener('pointerup',e=>{
   if(!ptr)return;
+  if(cur&&cur.release&&!over&&!titleMode&&!paused){const r=cv.getBoundingClientRect();cur.release(e.clientX-r.left,e.clientY-r.top,{dist:Math.hypot(e.clientX-ptr.x,e.clientY-ptr.y),ms:performance.now()-ptr.t,sx:ptr.x-r.left,sy:ptr.y-r.top});ptr=null;return}
   if(!ptr.used&&!cur.tapOnDown&&cur.tap&&!over){const r=cv.getBoundingClientRect();cur.tap(e.clientX-r.left,e.clientY-r.top)}
   ptr=null;
 });
@@ -1133,8 +1187,470 @@ const Merge={id:'merge',title:'Merge the Rands',hint:'Swipe to slide. Two of the
   }
 };
 
+/* ============ 5. UMLABALABA (morabaraba) ============ */
+/* Board: three nested squares with 24 points. Point id = ring*8 + k, k walking clockwise from the top-left corner.
+   Lines join each point to its ring neighbours and to the same spot on the next ring, corners included (the diagonals). */
+const UM=(()=>{
+  const R=[[0,0],[3,0],[6,0],[6,3],[6,6],[3,6],[0,6],[0,3]],pts=[];
+  for(let r=0;r<3;r++)for(let k=0;k<8;k++){const [x,y]=R[k];pts.push([r+x*(6-2*r)/6,r+y*(6-2*r)/6])}
+  const adj=pts.map(()=>[]),link=(a,b)=>{adj[a].push(b);adj[b].push(a)};
+  for(let r=0;r<3;r++)for(let k=0;k<8;k++)link(r*8+k,r*8+(k+1)%8);
+  for(let r=0;r<2;r++)for(let k=0;k<8;k++)link(r*8+k,(r+1)*8+k);
+  const mills=[];for(let r=0;r<3;r++)for(const k of [0,2,4,6])mills.push([r*8+k,r*8+k+1,r*8+(k+2)%8]);
+  for(let k=0;k<8;k++)mills.push([k,8+k,16+k]);
+  return{pts,adj,mills};
+})();
+/* Two phones talk through PeerJS: the host gets a 4-letter code, the friend types it in. Only loaded when someone taps Host or Join. */
+const Net={peer:null,conn:null,onMsg:null,
+  load(){return new Promise((res,rej)=>{if(window.Peer)return res();const sc=document.createElement('script');sc.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';sc.onload=()=>window.Peer?res():rej(new Error('load'));sc.onerror=()=>rej(new Error('load'));document.head.appendChild(sc)})},
+  code(){const A='ABCDEFGHJKMNPQRSTUVWXYZ';return Array.from({length:4},()=>A[ri(A.length)]).join('')},
+  async host(cb,tries=0){await this.load();const code=this.code();const p=new Peer('ekhaya-umla-'+code);this.peer=p;
+    p.on('open',()=>cb.code(code));p.on('connection',c=>this.wire(c,cb));
+    p.on('error',e=>{if(e.type==='unavailable-id'&&tries<4){try{p.destroy()}catch(_){}this.host(cb,tries+1)}else cb.error(e)})},
+  async join(code,cb){await this.load();const p=new Peer();this.peer=p;
+    p.on('open',()=>this.wire(p.connect('ekhaya-umla-'+code,{reliable:true}),cb));p.on('error',e=>cb.error(e))},
+  wire(c,cb){this.conn=c;c.on('open',()=>cb.connected());c.on('data',d=>this.onMsg&&this.onMsg(d));c.on('close',()=>cb.lost&&cb.lost())},
+  send(m){try{if(this.conn&&this.conn.open)this.conn.send(m)}catch(e){}},
+  leave(){try{this.conn&&this.conn.close()}catch(e){}try{this.peer&&this.peer.destroy()}catch(e){}this.conn=null;this.peer=null}
+};
+window.__ekhayaNet=Net;
+/* The computer opponent: looks a few turns ahead (alpha-beta search) and scores boards by cows left,
+   mills made, rows of two waiting for a third, and room to move. Easy also makes random moves sometimes. */
+const MoraAI={
+  cnt(b,p){let n=0;for(const v of b)if(v===p)n++;return n},
+  ph(s,p){return s.hand[p]>0?'place':this.cnt(s.b,p)===3?'fly':'move'},
+  millAt(b,i){const p=b[i];return !!p&&UM.mills.some(m=>m.includes(i)&&m.every(j=>b[j]===p))},
+  shootable(b,o){const all=[],free=[];for(let i=0;i<24;i++)if(b[i]===o){all.push(i);if(!this.millAt(b,i))free.push(i)}return free.length?free:all},
+  mob(s,p){let n=0;for(let i=0;i<24;i++)if(s.b[i]===p)for(const j of UM.adj[i])if(!s.b[j])n++;return n},
+  moves(s){const p=s.turn,o=3-p,ph=this.ph(s,p),base=[],out=[];
+    if(ph==='place'){for(let i=0;i<24;i++)if(!s.b[i])base.push({k:'place',i})}
+    else for(let f=0;f<24;f++)if(s.b[f]===p){for(let i=0;i<24;i++)if(!s.b[i]&&(ph==='fly'||UM.adj[f].includes(i)))base.push({k:'move',f,i})}
+    for(const m of base){const b=s.b.slice();if(m.k==='place')b[m.i]=p;else{b[m.f]=0;b[m.i]=p}
+      if(this.millAt(b,m.i)&&this.cnt(b,o)>0){for(const x of this.shootable(b,o))out.push({m,x})}else out.push({m,x:-1})}
+    return out},
+  play(s,mv){const p=s.turn,b=s.b.slice(),hand=s.hand.slice();if(mv.m.k==='place'){b[mv.m.i]=p;hand[p]--}else{b[mv.m.f]=0;b[mv.m.i]=p}if(mv.x>=0)b[mv.x]=0;return{b,hand,turn:3-p}},
+  dead(s,p){if(s.hand[p]===0&&this.cnt(s.b,p)<3)return true;if(this.ph(s,p)!=='move')return false;
+    for(let i=0;i<24;i++)if(s.b[i]===p&&UM.adj[i].some(j=>!s.b[j]))return false;return true},
+  score(s,me){const o=3-me;let v=14*((this.cnt(s.b,me)+s.hand[me])-(this.cnt(s.b,o)+s.hand[o]));
+    for(const m of UM.mills){let a=0,c=0,e=0;for(const j of m){const q=s.b[j];if(q===me)a++;else if(q===o)c++;else e++}
+      if(a===3)v+=3;else if(c===3)v-=3;if(a===2&&e===1)v+=2.5;else if(c===2&&e===1)v-=3}
+    if(this.ph(s,me)==='move'||this.ph(s,o)==='move')v+=0.4*(this.mob(s,me)-this.mob(s,o));return v},
+  search(s,d,al,be,me){
+    if(s.hand[1]===0&&this.cnt(s.b,1)<3)return me===1?-9999-d:9999+d;
+    if(s.hand[2]===0&&this.cnt(s.b,2)<3)return me===2?-9999-d:9999+d;
+    if(d===0)return this.score(s,me);
+    const ms=this.moves(s);if(!ms.length)return s.turn===me?-9999-d:9999+d;
+    if(s.turn===me){let v=-Infinity;for(const mv of ms){v=Math.max(v,this.search(this.play(s,mv),d-1,al,be,me));al=Math.max(al,v);if(al>=be)break}return v}
+    let v=Infinity;for(const mv of ms){v=Math.min(v,this.search(this.play(s,mv),d-1,al,be,me));be=Math.min(be,v);if(al>=be)break}return v},
+  best(s,level){const me=s.turn,ms=this.moves(s);if(!ms.length)return null;
+    if(level==='easy'&&Math.random()<0.4)return ms[ri(ms.length)];
+    let d=level==='easy'?1:level==='normal'?2:4;if(ms.length>30)d=Math.min(d,3);
+    let bv=-Infinity,pick=ms[0];for(const mv of ms){const v=this.search(this.play(s,mv),d-1,-Infinity,Infinity,me)+Math.random()*0.6;if(v>bv){bv=v;pick=mv}}return pick}
+};
+const Mora={id:'mora',title:'Umlabalaba',hint:'',tapOnDown:true,twoPlayer:true,mode:'pass',me:0,
+  init(){clearTimeout(this.cpuT);this.b=Array(24).fill(0);this.hand=[0,12,12];this.turn=1;this.shoot=0;this.sel=-1;this.win=0;this.quiet=0;this.fx=[];this.mill=null;this.t=0;this.note='';this.noteT=0;this.gone=false},
+  openMenu(){Net.leave();this.mode='pass';this.me=0;this.init();$('mMenu').hidden=false;$('mHome').hidden=false;$('mNet').hidden=true;paintLvl()},
+  leave(){Net.leave()},
+  name(p){return this.mode==='net'?(p===this.me?'You':'Your friend'):this.mode==='cpu'?(p===1?'You':'Computer'):(p===1?'Light':'Dark')},
+  count(p){let n=0;for(const v of this.b)if(v===p)n++;return n},
+  phase(p){return this.hand[p]>0?'place':this.count(p)===3?'fly':'move'},
+  inMill(i){const p=this.b[i];return !!p&&UM.mills.some(m=>m.includes(i)&&m.every(j=>this.b[j]===p))},
+  millsAt(i){const p=this.b[i];return UM.mills.filter(m=>m.includes(i)&&m.every(j=>this.b[j]===p))},
+  canShoot(i){const o=3-this.turn;if(this.b[i]!==o)return false;if(!this.inMill(i))return true;return this.b.every((v,j)=>v!==o||this.inMill(j))},
+  hasMove(p){if(this.phase(p)!=='move')return true;for(let i=0;i<24;i++)if(this.b[i]===p&&UM.adj[i].some(j=>!this.b[j]))return true;return false},
+  myTurn(){return this.mode==='pass'||(this.mode==='cpu'?this.turn===1:this.turn===this.me)},
+  legal(a){const p=this.turn;if(this.win||!a)return false;
+    if(this.shoot)return a.k==='shoot'&&this.canShoot(a.i);
+    if(a.k==='place')return this.phase(p)==='place'&&!this.b[a.i];
+    if(a.k==='move')return this.phase(p)!=='place'&&this.b[a.f]===p&&!this.b[a.i]&&(this.phase(p)==='fly'||UM.adj[a.f].includes(a.i));
+    return false},
+  flash(t){this.note=t;this.noteT=2.2;Sfx.tone(170,.12,{type:'square',vol:.05})},
+  tap(x,y){
+    if(this.win||!this.myTurn())return;const i=this.hit(x,y);if(i<0){this.sel=-1;return}
+    const p=this.turn;let a=null;
+    if(this.shoot){a={k:'shoot',i};if(!this.legal(a)){this.flash(this.b[i]===3-p?'That cow is safe in a mill. Pick another.':'Tap one of their cows to shoot it.');return}}
+    else if(this.phase(p)==='place'){a={k:'place',i};if(!this.legal(a))return}
+    else if(this.b[i]===p){this.sel=i;Sfx.tone(520,.04,{type:'triangle',vol:.06});return}
+    else if(this.sel>=0){a={k:'move',f:this.sel,i};if(!this.legal(a)){this.flash(this.phase(p)==='fly'?'Pick an empty point.':'Cows walk one step along a line.');return}}
+    else return;
+    this.apply(a);if(this.mode==='net')Net.send({t:'act',a});
+  },
+  apply(a){
+    const p=this.turn,o=3-p;
+    if(a.k==='shoot'){this.b[a.i]=0;this.fx.push({k:'shot',i:a.i,p:o,t:0});this.shoot=0;this.quiet=0;
+      Sfx.tone(150,.25,{vol:.32,to:60});Sfx.noise(.18,{vol:.18,freq:900,to:200,type:'lowpass'});this.next();return}
+    if(a.k==='place'){this.b[a.i]=p;this.hand[p]--}else{this.b[a.f]=0;this.b[a.i]=p;this.sel=-1}
+    this.fx.push({k:'pop',i:a.i,t:0});Sfx.tone(300,.07,{type:'triangle',vol:.14});Sfx.noise(.04,{vol:.08,freq:1500});
+    const ms=this.millsAt(a.i);
+    if(ms.length&&this.count(o)>0){this.mill={m:ms,t:0};this.shoot=1;[523,659,784].forEach((f,k)=>Sfx.tone(f,.14,{type:'triangle',vol:.1,delay:k*.08}));return}
+    const late=this.hand[1]+this.hand[2]===0&&this.count(1)===3&&this.count(2)===3;this.quiet=late?this.quiet+1:0;
+    this.next();
+  },
+  next(){this.turn=3-this.turn;this.sel=-1;
+    for(const q of [1,2])if(this.hand[q]===0&&this.count(q)<3)return this.finish(3-q,this.name(q)+(this.mode==='net'&&q===this.me?' are':' is')+' down to two cows.');
+    if(!this.hasMove(this.turn))return this.finish(3-this.turn,this.name(this.turn)+' has no moves left.');
+    if(this.quiet>=20)return this.finish(0,'Ten turns each with three cows and no shot.');
+    if(this.mode==='cpu'&&this.turn===2)this.cpuGo()},
+  cpuGo(){clearTimeout(this.cpuT);this.cpuT=setTimeout(()=>{
+      if(cur!==this||this.mode!=='cpu'||this.win||this.turn!==2||titleMode)return;
+      const mv=MoraAI.best({b:this.b.slice(),hand:this.hand.slice(),turn:2},store.get('mora_lvl','normal'));if(!mv)return;
+      this.apply(mv.m);
+      if(this.shoot){this.cpuT=setTimeout(()=>{if(!this.shoot||this.turn!==2||cur!==this)return;
+        let x=mv.x;if(!(x>=0&&this.canShoot(x))){for(let i=0;i<24;i++)if(this.canShoot(i)){x=i;break}}this.apply({k:'shoot',i:x})},700)}
+    },550)},
+  finish(w,why){this.win=w||3;
+    const title=w===0?'Draw':this.mode==='net'?(w===this.me?'You win!':'Your friend wins'):this.mode==='cpu'?(w===1?'You win!':'Computer wins'):(w===1?'Light wins!':'Dark wins!');
+    if(this.mode==='cpu'&&w===1){const lv=store.get('mora_lvl','normal'),k='mora_w_'+lv,n=store.get(k,0)+1;store.set(k,n);why+=` You've beaten the computer on ${lv[0].toUpperCase()+lv.slice(1)} ${n} time${n>1?'s':''}.`}
+    if(w===0||(this.mode==='net'&&w!==this.me)||(this.mode==='cpu'&&w!==1))Sfx.tone(330,.2,{type:'triangle',vol:.12});else [523,659,784,1047].forEach((f,k)=>Sfx.tone(f,.2,{type:'square',vol:.07,delay:k*.11}));
+    setTimeout(()=>{if(cur!==this||titleMode)return;$('mEndT').textContent=title;$('mEndW').textContent=why;$('mAgain').hidden=false;$('mEnd').hidden=false},900)},
+  lost(){if(cur!==this||titleMode||this.gone)return;this.gone=true;this.win=this.win||3;$('mEndT').textContent='Connection lost';$('mEndW').textContent='Your friend left the game or lost signal.';$('mAgain').hidden=true;$('mEnd').hidden=false},
+  update(dt){this.t+=dt;for(const f of this.fx)f.t+=dt;this.fx=this.fx.filter(f=>f.t<0.6);if(this.mill)this.mill.t+=dt;this.noteT=Math.max(0,this.noteT-dt)},
+  attract(dt){this.t+=dt},
+  geo(){const top=104,bot=66,S=Math.max(180,Math.min((W-24)/1.15,H-top-bot-24,520));return{S,bx:(W-S)/2,by:top+Math.max(0,(H-top-bot-S)/2)}},
+  P(i){const {S,bx,by}=this.geo(),[gx,gy]=UM.pts[i];return[bx+gx*S/6,by+gy*S/6]},
+  hit(x,y){const {S}=this.geo();let best=-1,bd=S/10;for(let i=0;i<24;i++){const [px,py]=this.P(i),d=Math.hypot(px-x,py-y);if(d<bd){bd=d;best=i}}return best},
+  cow(g,x,y,r,p,al=1){g.save();g.globalAlpha=al;
+    g.fillStyle='rgba(0,0,0,.28)';g.beginPath();g.ellipse(x+r*0.12,y+r*0.3,r,r*0.82,0,0,7);g.fill();
+    g.fillStyle=p===1?'#f2ece0':'#2b2420';g.beginPath();g.arc(x,y,r,0,7);g.fill();
+    g.fillStyle=p===1?'#8a5230':'#ece4d4';g.beginPath();g.ellipse(x-r*0.35,y-r*0.2,r*0.32,r*0.24,-.5,0,7);g.ellipse(x+r*0.32,y+r*0.32,r*0.24,r*0.18,.4,0,7);g.fill();
+    g.strokeStyle=p===1?'rgba(60,35,15,.45)':'rgba(255,255,255,.18)';g.lineWidth=Math.max(1.5,r*0.1);g.beginPath();g.arc(x,y,r-g.lineWidth/2,0,7);g.stroke();g.restore()},
+  draw(g){
+    const {S,bx,by}=this.geo(),pad=S*0.075,r=S/15,lw=Math.max(2.5,S/105);
+    g.fillStyle='#24190f';g.fillRect(0,0,W,H);
+    g.fillStyle='#b98d55';rr(g,bx-pad,by-pad,S+2*pad,S+2*pad,18);g.fill();
+    g.strokeStyle='rgba(90,55,25,.13)';g.lineWidth=1;for(let y=by-pad+9;y<by+S+pad;y+=11){g.beginPath();g.moveTo(bx-pad+6,y);g.bezierCurveTo(bx+S*0.3,y+3,bx+S*0.7,y-3,bx+S+pad-6,y+1);g.stroke()}
+    g.strokeStyle='#4a2f17';g.lineWidth=lw;g.lineCap='round';g.lineJoin='round';
+    for(let rg=0;rg<3;rg++){g.beginPath();for(let k=0;k<8;k++){const [x,y]=this.P(rg*8+k);k?g.lineTo(x,y):g.moveTo(x,y)}g.closePath();g.stroke()}
+    for(let k=0;k<8;k++){const [x1,y1]=this.P(k),[x2,y2]=this.P(16+k);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()}
+    if(this.mill&&this.mill.t<1.4){g.save();g.globalAlpha=Math.max(0,1-this.mill.t/1.4);g.strokeStyle='#ffc23d';g.lineWidth=lw*2.6;
+      for(const m of this.mill.m){const [x1,y1]=this.P(m[0]),[x2,y2]=this.P(m[2]);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()}g.restore()}
+    g.fillStyle='#4a2f17';for(let i=0;i<24;i++){const [x,y]=this.P(i);g.beginPath();g.arc(x,y,lw*1.5,0,7);g.fill()}
+    const live=!this.win&&!titleMode&&this.myTurn(),pulse=0.5+0.5*Math.sin(this.t*7);
+    if(live&&!this.shoot&&this.sel>=0){const fly=this.phase(this.turn)==='fly';
+      for(let j=0;j<24;j++)if(!this.b[j]&&(fly||UM.adj[this.sel].includes(j))){const [x,y]=this.P(j);g.fillStyle=`rgba(95,211,141,${0.55+0.3*pulse})`;g.beginPath();g.arc(x,y,r*0.38,0,7);g.fill()}}
+    for(let i=0;i<24;i++){const p=this.b[i];if(!p)continue;const [x,y]=this.P(i);const pop=this.fx.find(f=>f.k==='pop'&&f.i===i);
+      const sc=pop?1+0.35*Math.sin(Math.min(1,pop.t/0.3)*Math.PI)*(1-pop.t/0.6):1;this.cow(g,x,y,r*sc,p);
+      if(i===this.sel){g.strokeStyle='#ffc23d';g.lineWidth=3;g.beginPath();g.arc(x,y,r+5,0,7);g.stroke()}
+      if(live&&this.shoot&&this.canShoot(i)){g.strokeStyle=`rgba(255,90,70,${0.5+0.5*pulse})`;g.lineWidth=3;g.beginPath();g.arc(x,y,r+4+pulse*3,0,7);g.stroke()}}
+    for(const f of this.fx)if(f.k==='shot'){const [x,y]=this.P(f.i);this.cow(g,x,y,r*(1+f.t),f.p,1-f.t/0.6)}
+    const hr=Math.max(6,Math.min(10,S/42)),row=(p,y)=>{const n=this.hand[p];const w=n*hr*2.3;for(let k=0;k<n;k++)this.cow(g,W/2-w/2+hr*1.15+k*hr*2.3,y,hr,p)};
+    row(2,by-pad-hr-8);row(1,by+S+pad+hr+8);
+    if(titleMode)return;
+    const p=this.turn,ph=this.phase(p);
+    let txt=this.win?'Game over':this.mode==='net'&&!this.myTurn()?'Your friend is thinking…':this.mode==='cpu'&&!this.myTurn()?(this.shoot?'Computer made a mill!':'Computer is thinking…'):
+      (this.mode==='net'||this.mode==='cpu'?'Your turn: ':this.name(p)+': ')+(this.shoot?'shoot one of their cows!':ph==='place'?`place a cow (${this.hand[p]} left)`:ph==='fly'?'flying! move a cow anywhere':this.sel>=0?'tap where it should go':'move a cow');
+    if(this.noteT>0)txt=this.note;
+    g.font=`800 15px ${BODY}`;const tw=Math.min(W-24,g.measureText(txt).width+52),tx=W/2-tw/2,ty=14;
+    g.fillStyle=this.shoot&&!this.win?'#5a1d17':'#1a2340';rr(g,tx,ty,tw,38,19);g.fill();
+    this.cow(g,tx+22,ty+19,10,p);g.fillStyle='#eef0f7';g.textAlign='left';g.textBaseline='middle';g.fillText(txt,tx+40,ty+20,tw-48);g.textBaseline='alphabetic';
+  },
+  sheet(){$('sheetTitle').textContent='How to play';
+    $('sheetBody').innerHTML=`<ol class="how"><li>Each player has 12 cows. Take turns placing them on any empty point.</li><li>Three of your cows in a row along a line is a mill. The diagonals count too. Make one and you shoot one of their cows.</li><li>You can't shoot a cow that's in a mill, unless all their cows are in mills.</li><li>When all cows are placed, move one cow per turn along a line to an empty point next to it.</li><li>Down to 3 cows? Your cows fly: move to any empty point.</li><li>Fall to 2 cows, or get boxed in with no moves, and you lose. If both players have 3 cows and nobody shoots in 10 turns each, it's a draw.</li></ol>`}
+};
+Net.onMsg=d=>{if(cur!==Mora||!d)return;
+  if(d.t==='act'&&Mora.mode==='net'&&!Mora.myTurn()&&Mora.legal(d.a))Mora.apply(d.a);
+  else if(d.t==='again'){start()}};
+const mNet=(msg,opt={})=>{$('mHome').hidden=true;$('mNet').hidden=false;$('mNetMsg').textContent=msg;$('mCodeBox').hidden=!opt.code;if(opt.code)$('mCodeBox').textContent=opt.code;$('mCode').hidden=!opt.input;$('mGo').hidden=!opt.input};
+const netFail=e=>{const t=e&&e.type;mNet(t==='peer-unavailable'?'No game with that code. Check the letters and try again.':t==='network'||t==='server-error'||t==='socket-error'?'Could not reach the game server. Check your signal and try again.':'Online play is not working here. It needs the home-screen app with signal; it does not work inside Claude.',{input:$('mCode').hidden===false})};
+$('mPass').onclick=()=>{Sfx.init();Mora.mode='pass';Mora.me=0;start()};
+$('mCpu').onclick=()=>{Sfx.init();Mora.mode='cpu';Mora.me=1;start()};
+function paintLvl(){const lv=store.get('mora_lvl','normal');document.querySelectorAll('#mLvl button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===lv)))}
+document.querySelectorAll('#mLvl button').forEach(b=>b.onclick=()=>{store.set('mora_lvl',b.dataset.v);paintLvl();Sfx.tone(520,.05,{type:'triangle',vol:.07})});
+$('mRules').onclick=()=>openSheet('rules','mMenu');
+$('mHost').onclick=()=>{Sfx.init();mNet('Setting up your game…');
+  Net.host({code:c=>mNet('Give your friend this code. They tap Join game and type it in. Same Wi-Fi works best.',{code:c}),
+    connected:()=>{Mora.mode='net';Mora.me=1;start()},error:netFail,lost:()=>Mora.lost()}).catch(netFail)};
+$('mJoin').onclick=()=>{Sfx.init();$('mCode').value='';mNet('Type the 4-letter code from your friend’s phone.',{input:true});setTimeout(()=>{try{$('mCode').focus()}catch(e){}},50)};
+$('mGo').onclick=()=>{const c=$('mCode').value.trim().toUpperCase();if(!/^[A-Z]{4}$/.test(c)){$('mNetMsg').textContent='The code is 4 letters.';return}
+  mNet('Connecting…');Net.join(c,{connected:()=>{Mora.mode='net';Mora.me=2;start()},error:netFail,lost:()=>Mora.lost()}).catch(netFail)};
+$('mCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('mGo').click()});
+$('mCancel').onclick=()=>{Net.leave();Mora.openMenu()};
+$('mAgain').onclick=()=>{Sfx.init();if(Mora.mode==='net')Net.send({t:'again'});start()};
+$('mBack').onclick=()=>{Net.leave();showTitle()};
+
+/* ============ 6. FOUR SQUARE ============ */
+/* Squares by rank: 0 = King (top-left), 1 top-right, 2 bottom-right, 3 bottom-left (the lowest).
+   The ball flies from the hitter to a spot in the target square, bounces once, and must be hit before it bounces again.
+   Whoever lets it bounce twice (or hits it out) goes to square 4 and everyone below them moves up. */
+/* Four Square online: one phone hosts (runs the real game), up to 3 friends join with a 4-letter code.
+   Friends' taps go to the host; the host sends back where everything is 20 times a second. Empty spots are the computer. */
+const NetHub={peer:null,conns:{},hostConn:null,onMsg:null,onLeave:null,isHost:false,
+  async open(cb,tries=0){await Net.load();const code=Net.code();const p=new Peer('ekhaya-4sq-'+code);this.peer=p;this.isHost=true;this.conns={};
+    p.on('open',()=>cb.code(code));
+    p.on('connection',c=>{c.on('open',()=>{this.conns[c.peer]=c});c.on('data',d=>this.onMsg&&this.onMsg(d,c.peer));
+      c.on('close',()=>{delete this.conns[c.peer];this.onLeave&&this.onLeave(c.peer)})});
+    p.on('error',e=>{if(e.type==='unavailable-id'&&tries<4){try{p.destroy()}catch(_){}this.open(cb,tries+1)}else if(e.type!=='peer-unavailable')cb.error(e)})},
+  async join(code,cb){await Net.load();const p=new Peer();this.peer=p;this.isHost=false;
+    p.on('open',()=>{const c=p.connect('ekhaya-4sq-'+code,{reliable:true});this.hostConn=c;
+      c.on('open',()=>cb.connected());c.on('data',d=>this.onMsg&&this.onMsg(d,'host'));c.on('close',()=>this.onLeave&&this.onLeave('host'))});
+    p.on('error',e=>cb.error(e))},
+  to(id,m){const c=id==='host'?this.hostConn:this.conns[id];try{if(c&&c.open)c.send(m)}catch(e){}},
+  all(m){for(const id in this.conns)this.to(id,m)},
+  leave(){const cs=Object.values(this.conns);if(this.hostConn)cs.push(this.hostConn);this.onLeave=null;
+    for(const c of cs){try{c.close()}catch(e){}}try{this.peer&&this.peer.destroy()}catch(e){}
+    this.peer=null;this.conns={};this.hostConn=null;this.isHost=false;setTimeout(()=>{NetHub.onLeave=fourLeft},0)}
+};
+window.__ekhayaNet4=NetHub;setTimeout(()=>{window.__ekhayaFour=FourSq},0);
+const FOUR_WIN=50,FOUR_CPU=['','Lwazi','Ayanda','Sipho'];
+const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit, flick for power. You can hit it before or after it bounces, but your hit must bounce in your own square: flick too hard and it skips it = DIRECT.',
+  mode:'solo',mePid:0,seats:null,started:false,played:false,cmap:{},
+  defSeats(){return[{n:'You',h:'local'},{n:'Lwazi'},{n:'Ayanda'},{n:'Sipho'}]},
+  init(){
+    if(this.mode==='solo'){this.seats=this.defSeats();this.mePid=0}
+    const cols=['#ffc23d','#2f7de1','#d63b2f','#3a9a5b'],skins=['#7d5232','#5a3a22','#8d5f3b','#6b4426'];
+    this.pl=this.seats.map((s,i)=>({n:s.n,h:s.h||null,c:cols[i],skin:skins[i],sw:0,pts:0}));
+    this.occ=[1,2,3,0];this.lives=3;this.rallies=0;this.hits=0;this.state='pause';this.timer=1.2;this.ball=null;this.fx=[];
+    this.msg='';this.msgT=0;this.msgPid=null;this.msgYou='';this.loc='';this.locT=0;this.t=0;this.wasKing=false;this.done=false;
+    this.ev=[];this.sendT=0;this.snaps=[];this.bid=0;this.bad=0;
+    this.occ.forEach((p,r)=>{const [x,y]=this.home(r);this.pl[p].x=x;this.pl[p].y=y});
+  },
+  begin(){if(this.mode==='host'){if(this.played)NetHub.all({t:'again'});this.played=true}},
+  openMenu(){NetHub.leave();this.mode='solo';this.started=false;this.played=false;this.cmap={};this.init();
+    $('fMenu').hidden=false;$('fHome').hidden=false;$('fNet').hidden=true;$('fName').value=store.get('four_name','')},
+  leave(){NetHub.leave();this.mode='solo';this.started=false},
+  isMP(){return this.mode!=='solo'},
+  human(pid){return !!this.pl[pid].h},
+  geo(){const S=Math.max(220,Math.min(W-28,H-170,520));return{S,x0:(W-S)/2,y0:(H-S)/2+22}},
+  /* rank 0 King (top-right), 1 Prince (top-left), 2 Jack (bottom-left), 3 Loaf (bottom-right) */
+  names:['KING','PRINCE','JACK','LOAF'],
+  sq(r){const c=[[1,0],[0,0],[0,1],[1,1]][r],{S,x0,y0}=this.geo();return{x:x0+c[0]*S/2,y:y0+c[1]*S/2,s:S/2}},
+  home(r){const q=this.sq(r);return[q.x+q.s/2,q.y+q.s/2]},
+  rankAt(x,y){const {S,x0,y0}=this.geo();if(x<x0||y<y0||x>x0+S||y>y0+S)return -1;const c=x<x0+S/2?0:1,rw=y<y0+S/2?0:1;return rw===0?(c===1?0:1):(c===0?2:3)},
+  myRank(){return this.occ.indexOf(this.mePid)},
+  speed(){return Math.min(1,this.rallies*0.035+this.hits*0.02)},
+  /* sounds play here and, on the host, get sent to the friends' phones too */
+  snd(k,a){this.play(k,a);if(this.mode==='host')this.ev.push([k,a??0])},
+  play(k,a){
+    if(k==='hit'){Sfx.noise(.05,{vol:.2+0.25*a,freq:2400,type:'bandpass'});Sfx.tone(330+220*a,.05,{type:'triangle',vol:.1})}
+    else if(k==='drop')Sfx.tone(170,.08,{vol:.28,to:95});
+    else if(k==='land')Sfx.tone(160,.09,{vol:.3,to:90});
+    else if(k==='two')Sfx.tone(140,.08,{vol:.25,to:80});
+    else if(k==='wh'){Sfx.tone(2300,.16,{vol:.07});Sfx.tone(2700,.28,{vol:.07,delay:.18});if(a===this.mePid)Haptic.go('crash')}},
+  say(t,col,pid,you){this.msg=t;this.msgT=1.8;this.msgCol=col||'#eef0f7';this.msgPid=pid??null;this.msgYou=you||''},
+  msgText(){const p=this.msgPid;if(p==null)return this.msg;if(p===this.mePid)return this.msgYou||('You '+this.msg);return this.pl[p].n+' '+this.msg},
+  toast(t,col){this.loc=t;this.locT=1.6;this.locCol=col||'#ffc23d'},
+  sayTo(pid,t,col){if(pid===this.mePid)this.toast(t,col);else if(this.mode==='host')NetHub.to(this.pl[pid].id,{t:'say',m:t,c:col})},
+  fxAt(P,s){this.fx.push({k:'txt',x:P.x,y:P.y-50,t:0,s})},
+  addPts(pid,n){if(this.done)return;this.pl[pid].pts+=n;if(pid===this.mePid)setScore(this.pl[pid].pts);
+    if(this.isMP()&&this.pl[pid].pts>=FOUR_WIN)this.finish(pid)},
+  finish(w){if(this.done&&this.mode!=='guest')return;this.done=true;this.state='done';this.ball=null;
+    if(this.mode==='host')NetHub.all({t:'end',w});
+    setTimeout(()=>{if(cur===this&&!titleMode)end(w===this.mePid?'You win!':this.pl[w].n+' wins')},900)},
+  launch(from,to,out,pt,pow=0.5,start,direct){
+    const hitter=this.pl[this.occ[from]],q=this.sq(to),m=q.s*0.2;let tx=q.x+m+Math.random()*(q.s-2*m),ty=q.y+m+Math.random()*(q.s-2*m);
+    if(pt){const a=Math.random()*Math.PI*2,sc=3+26*pow*pow;tx=pt[0]+Math.cos(a)*sc*Math.random();ty=pt[1]+Math.sin(a)*sc*Math.random();
+      if(!out){const lr=this.rankAt(tx,ty);if(lr<0||lr===from)out=true;else to=lr}}
+    else if(out){const {S,x0,y0}=this.geo(),cx=x0+S/2,cy=y0+S/2,dx=tx-cx,dy=ty-cy,k=(S*0.6)/Math.max(Math.abs(dx),Math.abs(dy),1);tx=cx+dx*k;ty=cy+dy*k}
+    const T=(0.9-0.4*this.speed())*(1.3-0.6*pow);
+    const st=start||[hitter.x,hitter.y-8];
+    /* the computer sometimes hits it in the air before it bounces (allowed, it still bounces in their own square) */
+    const recv=this.pl[this.occ[to]],cv=!recv.h&&!out&&!direct&&Math.random()<0.1?rand(0.6,0.85):-1;
+    this.ball={id:++this.bid,cv,sx:st[0],sy:st[1],tx,ty,t:0,T,phase:'fly',to,from,out,mine:!!pt,hp:pt?this.occ[from]:-1,pow,x:hitter.x,y:hitter.y,z:0,
+      win:0.85-0.38*this.speed(),grace:recv.h==='remote'?0.3:0,u:0,cpuHit:-1};
+    if(!direct){const b=this.ball,q=this.sq(from),m=q.s*0.12;
+      /* the house rule: every hit goes down into your own square first, then carries on to the target */
+      b.phase='drop';b.d=0;b.dx0=b.sx;b.dy0=b.sy;
+      b.dx1=Math.max(q.x+m,Math.min(q.x+q.s-m,b.sx+(tx-b.sx)*0.18));b.dy1=Math.max(q.y+m,Math.min(q.y+q.s-m,b.sy+(ty-b.sy)*0.18))}
+    hitter.sw=0.3;this.state='play';this.snd('hit',+pow.toFixed(2));
+  },
+  serve(){const k=this.occ[0];
+    if(this.human(k)){this.state='serve';this.say('to serve.',null,k,'Your serve! Serve to JACK.');return}
+    if(Math.random()<0.04){this.launch(0,2,false,null,1,null,true);this.ball.bad=true}else this.launch(0,2,false,null,0.4);this.ball.serve=true},
+  pickTarget(from){const fp=this.occ[from],opts=[0,1,2,3].filter(r=>r!==from),hs=opts.filter(r=>this.human(this.occ[r]));
+    if(hs.length&&fp!==undefined&&Math.random()<0.42)return hs[ri(hs.length)];return opts[ri(opts.length)]},
+  update(dt){
+    this.t+=dt;this.msgT=Math.max(0,this.msgT-dt);this.locT=Math.max(0,this.locT-dt);
+    if(this.mode==='guest')return this.gUpdate(dt);
+    this.sim(dt);
+    if(this.mode==='host'){this.sendT-=dt;if(this.sendT<=0){this.sendT=0.05;NetHub.all(this.snap())}}
+  },
+  sim(dt){
+    for(const f of this.fx)f.t+=dt;this.fx=this.fx.filter(f=>f.t<0.7);
+    const b=this.ball;
+    this.occ.forEach((p,r)=>{const P=this.pl[p];P.sw=Math.max(0,P.sw-dt);let [hx,hy]=this.home(r);
+      if(b&&b.to===r&&!b.out){hx=hx+(b.tx-hx)*0.75;hy=hy+(b.ty-hy)*0.75+10}
+      const q=this.sq(r),m=16;hx=Math.max(q.x+m,Math.min(q.x+q.s-m,hx));hy=Math.max(q.y+m,Math.min(q.y+q.s-m,hy));
+      P.x+=(hx-P.x)*Math.min(1,dt*5);P.y+=(hy-P.y)*Math.min(1,dt*5)});
+    if(this.state==='pause'){this.timer-=dt;if(this.timer<=0)this.serve();return}
+    if(this.state!=='play'||!b)return;
+    if(b.phase==='drop'){b.d+=dt;const k=Math.min(1,b.d/0.2);b.x=b.dx0+(b.dx1-b.dx0)*k;b.y=b.dy0+(b.dy1-b.dy0)*k;b.z=(1-k)*34;
+      if(k>=1){this.snd('drop');this.fx.push({k:'puff',x:b.x,y:b.y,t:0});b.phase='fly';b.t=0;b.sx=b.x;b.sy=b.y}return}
+    if(b.phase==='fly'){b.t+=dt;const k=Math.min(1,b.t/b.T);
+      b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.z=Math.sin(k*Math.PI)*Math.min(150,H*0.17)*(1-0.35*this.speed())*(1.3-0.7*(b.pow??0.5));
+      if(b.cv>0&&k>=b.cv){const from=b.to;if(this.isMP())this.addPts(this.occ[from],1);if(this.done)return;this.launch(from,this.pickTarget(from),Math.random()<0.04,null,0.5,[b.x,b.y-b.z*0.3]);return}
+      if(k>=1){this.snd('land');this.fx.push({k:'puff',x:b.x,y:b.y,t:0});
+        if(b.direct)return this.out(b.from,'hit it DIRECT! Too hard, it skipped their own square.','You hit it DIRECT! Too hard, it skipped your own square.');
+        if(b.bad){this.bad++;
+          if(this.bad>=3)return this.out(b.from,'served badly 3 times. Out!','Bad serve number 3. You’re out!');
+          /* bad serve: the King gets 3 chances before going out */
+          this.ball=null;this.state='pause';this.timer=1.3;this.snd('wh',-1);
+          this.say('served badly! Serve again ('+(3-this.bad)+' left)','#ffc23d',b.from===undefined?null:this.occ[b.from],'Bad serve! Serve again ('+(3-this.bad)+' left)');return}
+        if(b.serve)this.bad=0;
+        if(b.out)return this.out(b.from,'hit it out!');
+        b.phase='up';b.u=0;b.vx=(b.tx-b.sx)/b.T*0.12;b.vy=(b.ty-b.sy)/b.T*0.12;
+        if(!this.human(this.occ[b.to])){const [hx,hy]=this.home(b.to),q=this.sq(b.to),d=Math.min(1.4,Math.hypot(b.tx-hx,b.ty-hy)/(q.s/2));
+          b.cpuHit=Math.random()<(0.97-0.13*this.speed()-(b.mine?0.22*d*d+0.22*(b.pow-0.5):0))?rand(0.3,0.8)*b.win:-1}}}
+    else{b.u+=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z=Math.sin(Math.min(1,b.u/b.win)*Math.PI)*Math.min(70,H*0.08);
+      if(b.cpuHit>=0&&b.u>=b.cpuHit){const from=b.to,out=Math.random()<0.035+0.05*this.speed();if(this.isMP()&&!out)this.addPts(this.occ[from],1);if(this.done)return;this.launch(from,this.pickTarget(from),out,null,0.5,[b.x,b.y-b.z*0.3]);return}
+      if(b.u>=b.win+b.grace){this.snd('two');this.out(b.to,'let it bounce twice!')}}
+  },
+  release(x,y,info){const sp=info.dist<14?0:info.dist/Math.max(40,info.ms),pow=info.dist<14?0.5:Math.max(0.12,Math.min(1,sp/1.4));this.hit(x,y,pow,sp)},
+  hit(x,y,pow,sp=0){
+    if(this.mode!=='guest')return this.hitBy(this.mePid,x,y,pow,null,sp);
+    /* on a friend's phone: check the obvious stuff here, then send the tap to the host */
+    const {S,x0,y0}=this.geo(),b=this.ball,me=this.myRank(),msg={t:'hit',u:(x-x0)/S,v:(y-y0)/S,pow,sp};
+    if(this.state==='serve'){if(me===0)NetHub.to('host',msg);return}
+    if(this.state!=='play'||!b||b.to!==me||b.phase==='drop')return;
+    if(b.phase==='fly'&&b.k<0.45){this.toast('Let it come to you!');return}
+    msg.view={ph:b.phase,k:b.k};this.pl[this.mePid].sw=0.3;NetHub.to('host',msg)},
+  hitBy(pid,x,y,pow,view,sp=0){
+    const me=this.occ.indexOf(pid),P=this.pl[pid],r=this.rankAt(x,y);
+    const {S,x0,y0}=this.geo(),near=x>x0-70&&x<x0+S+70&&y>y0-70&&y<y0+S+70;
+    const tag=()=>{if(pow>0.8)this.fxAt(P,'SMASH!');else if(pow<0.3)this.fxAt(P,'lob')};
+    if(this.state==='serve'){if(me!==0)return;
+      if(r===2){if(pow>0.75){this.launch(me,2,false,[x,y],pow,null,true);this.ball.bad=true;tag()}else this.launch(me,2,false,[x,y],Math.min(pow,0.5));this.ball.serve=true}
+      else if(r>=0)this.sayTo(pid,'The King serves to JACK!','#ffc23d');return}
+    const b=this.ball;if(this.state!=='play'||!b||b.to!==me||b.phase==='drop')return;
+    const ph=view?view.ph:b.phase,k=view?view.k:b.t/b.T;
+    if(ph==='fly'&&k<0.45){this.sayTo(pid,'Let it come to you!','#ffc23d');return}
+    if(r===me)return;
+    const st=[b.x,b.y-b.z*0.3];
+    /* you may hit it in the air or after the bounce, but it must go down in your own square first. Too hard skips it: DIRECT */
+    /* only a really violent flick (faster than ~3 screen-pixels per millisecond) counts as too hard */
+    if(r>=0&&sp>3.2){this.launch(me,r,false,[x,y],pow,st,true);this.ball.direct=true;this.fxAt(P,'TOO HARD!');return}
+    if(r<0){if(!near)return;this.launch(me,this.pickTarget(me),true,[x,y],pow,st);return}
+    this.hits++;this.addPts(pid,1);this.fxAt(P,'+1');this.launch(me,r,false,[x,y],pow,st);tag();
+  },
+  out(rank,why,you){
+    const pid=this.occ[rank];this.ball=null;this.bad=0;this.state='pause';this.timer=1.5;this.rallies++;this.snd('wh',pid);
+    this.say(why,pid===this.mePid?'#ff6b5a':'#eef0f7',pid,you);
+    if(!this.isMP()){
+      if(pid===0){this.lives--;if(this.lives<=0){this.state='done';setTimeout(()=>{if(cur===this)end('Out of lives')},900);return}}
+      else{const pts=4-this.myRank();this.addPts(0,pts);this.fxAt(this.pl[0],'+'+pts)}}
+    else this.occ.forEach((q,rk)=>{if(q!==pid)this.addPts(q,4-rk)});
+    if(this.done)return;
+    this.occ.splice(rank,1);this.occ.push(pid);this.kingCheck();
+  },
+  kingCheck(){const king=this.myRank()===0;if(king&&!this.wasKing){this.toast('You are the KING!');[523,659,784,1047].forEach((f,k)=>Sfx.tone(f,.16,{type:'square',vol:.06,delay:k*.1}))}this.wasKing=king},
+  /* ---- host -> friends ---- */
+  snap(){const {S,x0,y0}=this.geo(),nx=v=>+((v-x0)/S).toFixed(4),ny=v=>+((v-y0)/S).toFixed(4),b=this.ball;
+    return{t:'s',o:this.occ.slice(),st:this.state,P:this.pl.map(p=>[nx(p.x),ny(p.y),+p.sw.toFixed(2),p.pts]),
+      b:b?{i:b.id,x:nx(b.x),y:ny(b.y),z:+(b.z/S).toFixed(4),ph:b.phase,k:b.phase==='fly'?+(b.t/b.T).toFixed(3):0,u:b.phase==='up'?+Math.min(1,b.u/b.win).toFixed(3):0,
+        to:b.to,hp:b.hp,tx:nx(b.tx),ty:ny(b.ty),out:!!b.out}:null,
+      m:this.msgT>0?[this.msg,this.msgCol,this.msgPid,this.msgYou,+this.msgT.toFixed(2)]:null,
+      fx:this.fx.map(f=>[f.k,nx(f.x),ny(f.y),+f.t.toFixed(2),f.s||'']),ev:this.ev.splice(0)}},
+  gotSnap(s){for(const [k,a] of s.ev||[])this.play(k,a);s.at=performance.now();this.snaps.push(s);if(this.snaps.length>12)this.snaps.shift()},
+  gUpdate(dt){
+    const ss=this.snaps;if(!ss.length)return;
+    const rt=performance.now()-90;let a=ss[0],c=ss[ss.length-1];
+    for(let i=0;i<ss.length-1;i++)if(ss[i].at<=rt&&ss[i+1].at>rt){a=ss[i];c=ss[i+1];break}
+    if(ss[ss.length-1].at<=rt)a=c=ss[ss.length-1];
+    const f=c===a?1:Math.max(0,Math.min(1,(rt-a.at)/(c.at-a.at))),L=(p,q)=>p+(q-p)*f;
+    const {S,x0,y0}=this.geo(),X=u=>x0+u*S,Y=v=>y0+v*S;
+    this.occ=c.o;this.state=c.st;
+    this.pl.forEach((p,i)=>{const A=a.P[i],C=c.P[i];p.x=X(L(A[0],C[0]));p.y=Y(L(A[1],C[1]));p.sw=C[2];p.pts=C[3]});
+    if(this.pl[this.mePid].pts!==score)setScore(this.pl[this.mePid].pts);
+    const B=c.b,A=a.b&&B&&a.b.i===B.i?a.b:B;
+    this.ball=B?{x:X(L(A.x,B.x)),y:Y(L(A.y,B.y)),z:L(A.z,B.z)*S,phase:B.ph,k:B.k,u:B.u,win:1,to:B.to,tx:X(B.tx),ty:Y(B.ty),out:B.out,mine:B.hp===this.mePid}:null;
+    const m=ss[ss.length-1].m;if(m){this.msg=m[0];this.msgCol=m[1];this.msgPid=m[2];this.msgYou=m[3];this.msgT=m[4]}else this.msgT=0;
+    this.fx=c.fx.map(q=>({k:q[0],x:X(q[1]),y:Y(q[2]),t:q[3],s:q[4]}));
+    this.kingCheck();
+  },
+  onNet(d,id){if(!d)return;
+    if(NetHub.isHost){
+      if(d.t==='hello'){if(this.started)return NetHub.to(id,{t:'busy'});
+        const s=[1,2,3].find(i=>!this.seats[i].h);if(s===undefined)return NetHub.to(id,{t:'full'});
+        this.seats[s]={n:String(d.n||'Friend').slice(0,12),h:'remote',id};this.cmap[id]=s;NetHub.to(id,{t:'seat',pid:s});this.lobby();return}
+      if(d.t==='hit'&&this.mode==='host'&&cur===this&&!titleMode&&!over){const pid=this.cmap[id];if(pid==null)return;
+        const {S,x0,y0}=this.geo();this.hitBy(pid,x0+d.u*S,y0+d.v*S,Math.max(0.12,Math.min(1,+d.pow||0.5)),d.view||null,+d.sp||0)}
+      return}
+    if(d.t==='seat'){this.mePid=d.pid;fNetUI('You’re in! Waiting for the host to start…',{list:true})}
+    else if(d.t==='lobby')fourList(d.seats,this.mePid);
+    else if(d.t==='go'){this.seats=d.seats.map((s,i)=>({n:s.n,h:i===this.mePid?'local':s.h}));this.mode='guest';this.started=true;start()}
+    else if(d.t==='s'){if(this.mode==='guest'&&cur===this)this.gotSnap(d)}
+    else if(d.t==='say'){if(this.mode==='guest')this.toast(d.m,d.c)}
+    else if(d.t==='end'){if(this.mode==='guest'&&cur===this&&!over)this.finish(d.w)}
+    else if(d.t==='again'){if(this.mode==='guest'&&cur===this)start()}
+    else if(d.t==='full'||d.t==='busy')fNetUI(d.t==='full'?'That game is full (4 players).':'That game already started. Ask the host to start a new one.',{})},
+  lobby(){const ss=this.seats.map(s=>({n:s.n,h:s.h?'remote':null}));fourList(ss,0);NetHub.all({t:'lobby',seats:ss})},
+  dropped(id){const s=this.cmap[id];if(s==null)return;delete this.cmap[id];
+    if(cur===this&&this.mode==='host'&&!titleMode){this.say('left. The computer takes over.',null,s);this.pl[s].h=null;this.pl[s].n=FOUR_CPU[s]}
+    this.seats[s]={n:FOUR_CPU[s]};if(!this.started)this.lobby()},
+  person(g,P,me,label){
+    const r=13;g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(P.x,P.y+r*0.9,r*1.2,r*0.45,0,0,7);g.fill();
+    if(P.sw>0){const a=P.sw/0.3;g.strokeStyle=P.skin;g.lineWidth=5;g.lineCap='round';g.beginPath();g.moveTo(P.x+8,P.y-2);g.lineTo(P.x+8+14*a,P.y-16-10*a);g.stroke()}
+    g.fillStyle=P.c;g.beginPath();g.ellipse(P.x,P.y+2,r,r*0.8,0,0,7);g.fill();
+    g.fillStyle=P.skin;g.beginPath();g.arc(P.x,P.y-9,8,0,7);g.fill();g.fillStyle='#1b1b1b';g.beginPath();g.arc(P.x,P.y-11,7.6,Math.PI*1.05,Math.PI*1.95);g.fill();
+    g.font=`800 11px ${BODY}`;g.textAlign='center';const tw=g.measureText(label).width+10;
+    g.fillStyle=me?'#ffc23d':'rgba(16,23,42,.75)';rr(g,P.x-tw/2,P.y+r+4,tw,16,8);g.fill();g.fillStyle=me?'#10172a':'#fff';g.fillText(label,P.x,P.y+r+16);
+  },
+  pill(g,t,col,y){g.font=`800 16px ${BODY}`;g.textAlign='center';const tw=Math.min(W-20,g.measureText(t).width+28);
+    g.fillStyle='rgba(16,23,42,.9)';rr(g,W/2-tw/2,y-18,tw,36,18);g.fill();g.fillStyle=col;g.fillText(t,W/2,y+6,tw-20)},
+  draw(g){
+    const {S,x0,y0}=this.geo(),me=this.myRank();
+    g.fillStyle='#5f7f45';g.fillRect(0,0,W,H);
+    g.fillStyle='rgba(0,0,0,.08)';for(let i=0;i<40;i++){const x=(i*97)%W,y=(i*53)%H;g.beginPath();g.arc(x,y,6,0,7);g.fill()}
+    g.fillStyle='#c9c3b4';rr(g,x0-14,y0-14,S+28,S+28,10);g.fill();
+    for(let r=0;r<4;r++){const q=this.sq(r);if(r===me){g.fillStyle='rgba(255,194,61,.18)';g.fillRect(q.x,q.y,q.s,q.s)}
+      g.fillStyle='rgba(60,55,45,.18)';g.textAlign='center';g.textBaseline='middle';
+      g.font=`${Math.round(q.s*(r===1?0.15:0.19))}px ${FONT}`;g.fillText(this.names[r],q.x+q.s/2,q.y+q.s/2);g.textBaseline='alphabetic'}
+    g.strokeStyle='#fdfbf5';g.lineWidth=4;g.strokeRect(x0,y0,S,S);g.beginPath();g.moveTo(x0+S/2,y0);g.lineTo(x0+S/2,y0+S);g.moveTo(x0,y0+S/2);g.lineTo(x0+S,y0+S/2);g.stroke();
+    const kq=this.sq(0);g.fillStyle='#ffc23d';g.beginPath();const cx=kq.x+kq.s-20,cy=kq.y+16;g.moveTo(cx-10,cy+6);g.lineTo(cx-10,cy-4);g.lineTo(cx-5,cy+1);g.lineTo(cx,cy-7);g.lineTo(cx+5,cy+1);g.lineTo(cx+10,cy-4);g.lineTo(cx+10,cy+6);g.closePath();g.fill();
+    for(const f of this.fx)if(f.k==='puff'){g.strokeStyle=`rgba(255,255,255,${0.6*(1-f.t/0.7)})`;g.lineWidth=2;g.beginPath();g.ellipse(f.x,f.y,8+f.t*30,4+f.t*12,0,0,7);g.stroke()}
+    this.occ.forEach(p=>this.person(g,this.pl[p],p===this.mePid,p===this.mePid?'YOU':this.pl[p].n));
+    const b=this.ball;
+    if(b&&b.mine&&b.phase==='fly'){g.strokeStyle=b.out?'#ff6b5a':'#ffc23d';g.lineWidth=2.5;g.beginPath();g.moveTo(b.tx-7,b.ty-7);g.lineTo(b.tx+7,b.ty+7);g.moveTo(b.tx+7,b.ty-7);g.lineTo(b.tx-7,b.ty+7);g.stroke()}
+    if(b){const rad=9;g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(b.x,b.y,rad*Math.max(.4,1-b.z/200),rad*0.45*Math.max(.4,1-b.z/200),0,0,7);g.fill();
+      const br=rad*(1+b.z/260),by=b.y-b.z;g.fillStyle='#e0473a';g.beginPath();g.arc(b.x,by,br,0,7);g.fill();g.fillStyle='rgba(255,255,255,.55)';g.beginPath();g.arc(b.x-br*0.35,by-br*0.35,br*0.3,0,7);g.fill();
+      if(b.to===me&&b.phase==='up'){const k=Math.max(0,1-b.u/b.win);g.strokeStyle='#ffc23d';g.lineWidth=3;g.beginPath();g.arc(b.x,by,br+6+10*k,0,7);g.stroke()}}
+    const bk=b?(b.k??(b.t/b.T)):0;
+    const prompt=this.state==='serve'?(me===0?'Serve into the JACK square':''):b&&b.to===me&&this.state==='play'?(b.phase==='up'?'HIT IT NOW!':b.phase==='fly'&&bk>=0.45?'Hit it!':'Get ready…'):'';
+    if(prompt){g.font=`20px ${FONT}`;g.textAlign='center';g.fillStyle=b&&b.phase!=='drop'&&bk>=0.45||b&&b.phase==='up'?'#ffc23d':'#eef0f7';g.fillText(prompt,W/2,y0+S+50)}
+    for(const f of this.fx)if(f.k==='txt'){g.globalAlpha=Math.max(0,1-f.t/0.7);g.font=`20px ${FONT}`;g.textAlign='center';g.fillStyle='#ffc23d';g.fillText(f.s,f.x,f.y-f.t*30);g.globalAlpha=1}
+    if(!this.isMP()){
+      g.textAlign='left';g.font=`800 13px ${BODY}`;g.fillStyle='#fff';g.fillText('LIVES',16,y0-26);
+      for(let i=0;i<3;i++){g.fillStyle=i<this.lives?'#ff6b5a':'rgba(0,0,0,.25)';g.beginPath();g.arc(66+i*18,y0-31,6,0,7);g.fill()}
+      g.textAlign='right';g.fillText('You: '+this.names[me],W-16,y0-26);
+    }else{
+      /* scoreboard: everyone's points, first to FOUR_WIN */
+      const cw=(W-24)/4;g.font=`800 11px ${BODY}`;
+      this.pl.forEach((p,i)=>{const x=12+i*cw;g.fillStyle=i===this.mePid?'rgba(255,194,61,.9)':'rgba(16,23,42,.7)';rr(g,x+2,y0-52,cw-4,30,9);g.fill();
+        g.fillStyle=i===this.mePid?'#10172a':'#fff';g.textAlign='center';g.fillText((i===this.mePid?'You':p.n).slice(0,9)+(p.h?'':' 🤖'),x+cw/2,y0-40,cw-10);
+        g.font=`800 12px ${BODY}`;g.fillText(p.pts+' / '+FOUR_WIN,x+cw/2,y0-27);g.font=`800 11px ${BODY}`});
+    }
+    if(this.msgT>0){g.globalAlpha=Math.min(1,this.msgT*2);this.pill(g,this.msgText(),this.msgCol,y0+S/2);g.globalAlpha=1}
+    if(this.locT>0){g.globalAlpha=Math.min(1,this.locT*2);this.pill(g,this.loc,this.locCol,y0+S/2+(this.msgT>0?44:0));g.globalAlpha=1}
+    if(this.mode==='guest'&&!this.snaps.length)this.pill(g,'Waiting for the host…','#eef0f7',y0+S/2);
+  }
+};
+function fNetUI(msg,o={}){$('fHome').hidden=true;$('fNet').hidden=false;$('fNetMsg').textContent=msg;$('fCodeBox').hidden=!o.code;if(o.code)$('fCodeBox').textContent=o.code;
+  $('fCode').hidden=!o.input;$('fGo').hidden=!o.input;$('fList').hidden=!o.list;$('fStart').hidden=!o.start}
+function fourList(seats,me){const el=$('fList');el.innerHTML='';seats.forEach((s,i)=>{const d=document.createElement('div');d.className='fseat'+(i===me?' me':'');
+  d.textContent=(i+1)+'. '+(s.h?s.n:'Computer ('+s.n+')')+(i===me?'  (you)':'');el.appendChild(d)})}
+function fourName(){const v=($('fName').value||'').trim().slice(0,12);store.set('four_name',v);return v||'Player'}
+function fourFail(e){const t=e&&e.type;fNetUI(t==='peer-unavailable'?'No game with that code. Check the letters and try again.':t==='network'||t==='server-error'||t==='socket-error'?'Could not reach the game server. Check your signal and try again.':'Online play is not working here. It needs the home-screen app with signal; it does not work inside Claude.',{input:!$('fCode').hidden})}
+function fourLeft(id){const F=FourSq;
+  if(NetHub.isHost)return F.dropped(id);
+  if(cur===F&&F.mode==='guest'&&!titleMode){if(!over){F.done=true;F.state='done';end('The host left')}}
+  else if(cur===F&&titleMode&&!$('fMenu').hidden)fNetUI('The host closed the game.',{})}
+NetHub.onMsg=(d,id)=>FourSq.onNet(d,id);NetHub.onLeave=fourLeft;
+$('fSolo').onclick=()=>{Sfx.init();fourName();FourSq.mode='solo';start()};
+$('fHost').onclick=()=>{Sfx.init();const n=fourName();const F=FourSq;F.seats=[{n,h:'local'},{n:FOUR_CPU[1]},{n:FOUR_CPU[2]},{n:FOUR_CPU[3]}];F.mePid=0;F.cmap={};F.started=false;
+  fNetUI('Setting up your game…');
+  NetHub.open({code:c=>{fNetUI('Friends tap Join game and type this code. Up to 3 friends. The computer plays any empty spot.',{code:c,list:true,start:true});F.lobby()},error:fourFail}).catch(fourFail)};
+$('fJoin').onclick=()=>{Sfx.init();fourName();$('fCode').value='';fNetUI('Type the 4-letter code from the host’s phone.',{input:true});setTimeout(()=>{try{$('fCode').focus()}catch(e){}},50)};
+$('fGo').onclick=()=>{const c=$('fCode').value.trim().toUpperCase();if(!/^[A-Z]{4}$/.test(c)){$('fNetMsg').textContent='The code is 4 letters.';return}
+  fNetUI('Connecting…');NetHub.join(c,{connected:()=>NetHub.to('host',{t:'hello',n:fourName()}),error:fourFail}).catch(fourFail)};
+$('fCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('fGo').click()});
+$('fStart').onclick=()=>{Sfx.init();const F=FourSq;F.started=true;F.mode='host';F.played=false;
+  NetHub.all({t:'go',seats:F.seats.map(s=>({n:s.n,h:s.h?'remote':null}))});start()};
+$('fCancel').onclick=()=>FourSq.openMenu();
+
+
 /* ============ Menu ============ */
 const ICON={
+  four:'<svg viewBox="0 0 56 56"><rect width="56" height="56" rx="14" fill="#5f7f45"/><rect x="8" y="8" width="40" height="40" fill="#c9c3b4" stroke="#fff" stroke-width="2.5"/><path d="M28 8V48M8 28H48" stroke="#fff" stroke-width="2.5"/><path d="M12 20v-6l3 3 3-5 3 5 3-3v6z" fill="#ffc23d"/><circle cx="37" cy="36" r="5" fill="#e0473a"/></svg>',
+  mora:'<svg viewBox="0 0 56 56"><rect width="56" height="56" rx="14" fill="#b98d55"/><g fill="none" stroke="#4a2f17" stroke-width="2"><rect x="8" y="8" width="40" height="40"/><rect x="15" y="15" width="26" height="26"/><rect x="22" y="22" width="12" height="12"/><path d="M28 8V22M28 34V48M8 28H22M34 28H48M8 8L22 22M48 8L34 22M8 48L22 34M48 48L34 34"/></g><circle cx="15" cy="15" r="5" fill="#f2ece0"/><circle cx="41" cy="41" r="5" fill="#2b2420"/><circle cx="28" cy="8" r="5" fill="#f2ece0"/></svg>',
   stack:'<svg viewBox="0 0 56 56"><rect width="56" height="56" rx="14" fill="#2d2a5a"/><rect x="12" y="38" width="32" height="8" fill="#e8913a"/><rect x="15" y="29" width="28" height="8" fill="#e8c23a"/><rect x="13" y="20" width="26" height="8" fill="#9bd146"/><rect x="18" y="11" width="22" height="8" fill="#ffc23d" opacity=".6"/></svg>',
   bottle:'<svg viewBox="0 0 56 56"><rect width="56" height="56" rx="14" fill="#161f3a"/><rect x="6" y="42" width="44" height="5" fill="#3a4370"/><rect x="11" y="22" width="10" height="20" rx="3" fill="#e7edf6"/><rect x="13" y="16" width="6" height="5" fill="#2f7de1"/><rect x="31" y="22" width="10" height="20" rx="3" fill="#f39a3a"/><rect x="33" y="16" width="6" height="5" fill="#2f7de1"/></svg>',
   road:'<svg viewBox="0 0 56 56"><rect width="56" height="56" rx="14" fill="#3b6e36"/><rect x="14" y="0" width="28" height="56" fill="#a07e57"/><rect x="27" y="6" width="2" height="8" fill="#e9d8bd"/><rect x="27" y="22" width="2" height="8" fill="#e9d8bd"/><rect x="21" y="34" width="14" height="18" rx="4" fill="#ffc23d"/><ellipse cx="22" cy="14" rx="5" ry="3" fill="#2b2016"/></svg>',
@@ -1142,9 +1658,11 @@ const ICON={
   merge:'<svg viewBox="0 0 56 56"><rect width="56" height="56" rx="14" fill="#232d52"/><circle cx="19" cy="22" r="9" fill="#c3c9d4"/><circle cx="37" cy="22" r="9" fill="#d9b54a"/><rect x="10" y="34" width="36" height="14" rx="3" fill="#e08a36"/><text x="28" y="44.5" text-anchor="middle" font-family="Bungee,Impact,sans-serif" font-size="9" fill="#fff">R200</text></svg>'
 };
 const GAMES=[
+  [Road,'Swipe to dodge potholes, goats and sudden taxis.'],
+  [FourSq,'Stay King against the computer, or up to 3 friends online.'],
+  [Mora,'Morabaraba: beat the computer, pass the phone, or play on Wi-Fi.'],
   [Stack,'Drop swinging blocks. Overhang gets sliced off.'],
   [Bottle,'Reject bad bottles before the belt beats you.'],
-  [Road,'Swipe to dodge potholes, goats and sudden taxis.'],
   /* Herdboy parked for now: [Herd,'Snake, village style. Grow your herd.'], */
   [Merge,'2048 with money. Work your way to R200.']
 ];
