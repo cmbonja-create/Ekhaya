@@ -388,7 +388,7 @@ const SPK_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const SPK_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
 /* Haptics: Android uses the vibration API. iPhones have no vibration API for web pages, so we try the
    iOS 18 switch-control trick, which gives a light tick where the browser allows it. */
-const Haptic={el:null,paused:true,/* vibrations parked for now */
+const Haptic={el:null,paused:false,
   tick(){try{if(!this.el){const l=document.createElement('label'),i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');
       l.appendChild(i);l.style.cssText='position:fixed;left:-99px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';l.setAttribute('aria-hidden','true');document.body.appendChild(l);this.el=l}
     this.el.click()}catch(e){}},
@@ -732,6 +732,7 @@ const Road={id:'road',menu:true,title:'Gravel Road Dash',hint:'Swipe left or rig
         b.onclick=()=>{Sfx.init();Sfx.setMute(!v);paintMute();sg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};sg.appendChild(b)});
       w.appendChild(sg);B.appendChild(w);
       seg('Engine sound',null,[[true,'On'],[false,'Off']],'ekhaya_engine',true);
+      seg('Vibration','A light tap when you swipe, a bigger buzz when you crash.',[[true,'On'],[false,'Off']],'ekhaya_haptic',true,v=>{if(v)Haptic.go('swipe')});
       seg('Village sounds','Chickens and dogs at random along the road.',[[true,'On'],[false,'Off']],'road_village',true);
       seg('Difficulty',paused?'Changes start on your next run.':'Each difficulty keeps its own best score.',[['chill','Chilled'],['normal','Normal'],['hectic','Hectic']],'road_diff','normal');
       seg('Swipe sensitivity','Light reacts to the smallest flick. Firm needs a longer swipe.',[['light','Light'],['normal','Normal'],['firm','Firm']],'ekhaya_swipe','normal');
