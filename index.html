@@ -67,8 +67,8 @@ button:focus-visible{outline:3px solid var(--maize);outline-offset:2px}
 .sc b{font-family:var(--display);font-weight:400;font-size:24px;color:var(--maize);font-variant-numeric:tabular-nums}
 .stage{flex:1;position:relative;min-height:0;overflow:hidden}
 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
-.hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:calc(100% - 32px);
-  background:rgba(16,23,42,.88);border:1px solid var(--line);padding:8px 14px;border-radius:999px;
+.hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:min(340px,calc(100% - 32px));width:max-content;
+  background:rgba(16,23,42,.92);border:1px solid var(--line);padding:9px 16px;border-radius:16px;line-height:1.45;white-space:pre-line;
   font-size:13.5px;font-weight:700;text-align:center;pointer-events:none;transition:opacity .4s ease}
 .hint.fade{opacity:0}
 .over{position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,14,28,.62);padding:16px}
@@ -213,6 +213,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;displa
             <button class="btn pri big" id="fSolo">PLAY THE COMPUTER</button>
             <input id="fName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Your name (for friends)" aria-label="Your name" class="finput">
             <div class="row2"><button class="btn sec" id="fHost">Host game</button><button class="btn sec" id="fJoin">Join game</button></div>
+            <div class="row2"><button class="btn sec" id="fHow">How to play</button><button class="btn sec" id="fSet">Settings</button></div>
           </div>
           <div id="fNet" class="set" style="gap:10px" hidden>
             <p id="fNetMsg" style="margin:0;text-align:center;line-height:1.45"></p>
@@ -443,7 +444,7 @@ function start(){
   ensureLoop();
 }
 function ensureLoop(){if(!running){running=true;lastT=performance.now();requestAnimationFrame(loop)}}
-function syncBar(){document.querySelectorAll('.bar .sc').forEach(e=>e.style.display=cur&&cur.twoPlayer?'none':'');$('pauseBtn').hidden=!(cur&&cur.menu&&!titleMode&&!over);$('mute').hidden=!!(cur&&cur.menu);$('nm').style.visibility=(cur&&cur.menu)?'hidden':''}
+function syncBar(){document.querySelectorAll('.bar .sc').forEach(e=>e.style.display=cur&&cur.twoPlayer?'none':'');$('pauseBtn').hidden=!(canPause()&&!titleMode&&!over);$('mute').hidden=!!(cur&&cur.menu);$('nm').style.visibility=(cur&&cur.menu)?'hidden':''}
 function showTitle(){
   if(cur&&cur.openMenu){titleMode=true;over=false;paused=false;Sfx.engineStop();['over','pause','sheet','title','mEnd'].forEach(id=>$(id).hidden=true);$('hint').classList.add('fade');cur.openMenu();syncBar();ensureLoop();return}
   titleMode=true;over=false;paused=false;Sfx.engineStop();Sfx.hush();
@@ -451,7 +452,8 @@ function showTitle(){
   cur.rp=null;cur.init();setScore(0);$('bestNow').textContent=store.get(bestKey(cur),0);
   if(cur.fillTitle)cur.fillTitle();$('title').hidden=false;syncBar();ensureLoop();
 }
-function pauseGame(){if(!cur||!cur.menu||titleMode||over||paused)return;paused=true;Sfx.engineStop();$('pause').hidden=false;syncBar()}
+function canPause(){return !!cur&&!!(cur.menu||(cur.canPause&&cur.canPause()))}
+function pauseGame(){if(!canPause()||titleMode||over||paused)return;paused=true;Sfx.engineStop();$('pause').hidden=false;syncBar()}
 function resumeGame(){if(!paused)return;paused=false;$('pause').hidden=true;$('sheet').hidden=true;lastT=performance.now();if(cur.onStart)cur.onStart();syncBar()}
 let sheetFrom='title';
 function openSheet(kind,from){sheetFrom=from;$(from).hidden=true;cur.sheet(kind);$('sheet').hidden=false}
@@ -1392,7 +1394,7 @@ const NetHub={peer:null,conns:{},hostConn:null,onMsg:null,onLeave:null,isHost:fa
 };
 window.__ekhayaNet4=NetHub;setTimeout(()=>{window.__ekhayaFour=FourSq},0);
 const FOUR_WIN=50,FOUR_CPU=['','Lwazi','Ayanda','Sipho'];
-const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit, flick for power. You can hit it before or after it bounces, but your hit must bounce in your own square: flick too hard and it skips it = DIRECT.',
+const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit · Flick for power\nHit before or after the bounce\nFlick way too hard = DIRECT',
   mode:'solo',mePid:0,seats:null,started:false,played:false,cmap:{},
   defSeats(){return[{n:'You',h:'local'},{n:'Lwazi'},{n:'Ayanda'},{n:'Sipho'}]},
   init(){
@@ -1409,6 +1411,20 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit, flick for p
     $('fMenu').hidden=false;$('fHome').hidden=false;$('fNet').hidden=true;$('fName').value=store.get('four_name','')},
   leave(){NetHub.leave();this.mode='solo';this.started=false},
   isMP(){return this.mode!=='solo'},
+  canPause(){return this.mode==='solo'&&!this.done&&this.state!=='done'},
+  sheet(kind){const B=$('sheetBody');B.innerHTML='';
+    if(kind==='how'){$('sheetTitle').textContent='How to play';
+      B.innerHTML=`<ol class="how"><li>Four squares: <b>King</b> (top right), <b>Prince</b>, <b>Jack</b> and <b>Loaf</b>. Go out and you drop to Loaf; everyone below you moves up.</li><li>The King serves, always to Jack. The serve must bounce in the King's square first. A smashed serve is a bad serve: 3 bad serves and the King is out.</li><li><b>Tap</b> a spot to hit the ball there. <b>Flick</b> for power: short flick is a lob, long flick is a smash.</li><li>You can hit the ball before or after it bounces in your square, but every hit goes down in your own square first. Flick way too hard and it skips your square: <b>DIRECT</b>, you're out.</li><li>Let it bounce twice in your square, or hit it out, and you're out.</li><li>Against the computer you have 3 lives. With friends: first to ${FOUR_WIN} points wins.</li></ol>`;return}
+    $('sheetTitle').textContent='Settings';
+    const seg=(label,note,opts,get,set)=>{const w=document.createElement('div');w.className='set';w.innerHTML=`<label>${label}</label>`;const sg=document.createElement('div');sg.className='seg';
+      for(const [v,t] of opts){const b=document.createElement('button');b.textContent=t;b.setAttribute('aria-pressed',String(get()===v));
+        b.onclick=()=>{set(v);sg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));Sfx.tone(520,.05,{type:'triangle',vol:.07})};sg.appendChild(b)}
+      w.appendChild(sg);if(note){const p=document.createElement('p');p.textContent=note;w.appendChild(p)}B.appendChild(w)};
+    seg('Sound effects',null,[[true,'On'],[false,'Off']],()=>!Sfx.muted,v=>{Sfx.init();Sfx.setMute(!v);paintMute()});
+    seg('Computer players','How often Lwazi, Ayanda and Sipho miss.',[['easy','Easy'],['normal','Normal'],['hard','Hard']],()=>store.get('four_lvl','normal'),v=>store.set('four_lvl',v));
+    const r=document.createElement('button');r.className='btn danger';r.textContent='Reset best score';let armed=0;
+    r.onclick=()=>{if(!armed){armed=1;r.textContent='Tap again to reset';setTimeout(()=>{armed=0;r.textContent='Reset best score'},3000);return}
+      store.set(bestKey(this),0);$('bestNow').textContent=0;r.textContent='Best score reset';r.disabled=true};B.appendChild(r)},
   human(pid){return !!this.pl[pid].h},
   geo(){const S=Math.max(220,Math.min(W-28,H-170,520));return{S,x0:(W-S)/2,y0:(H-S)/2+22}},
   /* rank 0 King (top-right), 1 Prince (top-left), 2 Jack (bottom-left), 3 Loaf (bottom-right) */
@@ -1457,7 +1473,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit, flick for p
     if(this.human(k)){this.state='serve';this.say('to serve.',null,k,'Your serve! Serve to JACK.');return}
     if(Math.random()<0.04){this.launch(0,2,false,null,1,null,true);this.ball.bad=true}else this.launch(0,2,false,null,0.4);this.ball.serve=true},
   pickTarget(from){const fp=this.occ[from],opts=[0,1,2,3].filter(r=>r!==from),hs=opts.filter(r=>this.human(this.occ[r]));
-    if(hs.length&&fp!==undefined&&Math.random()<0.42)return hs[ri(hs.length)];return opts[ri(opts.length)]},
+    if(hs.length&&fp!==undefined&&Math.random()<({easy:0.3,normal:0.42,hard:0.6}[store.get('four_lvl','normal')]||0.42))return hs[ri(hs.length)];return opts[ri(opts.length)]},
   update(dt){
     this.t+=dt;this.msgT=Math.max(0,this.msgT-dt);this.locT=Math.max(0,this.locT-dt);
     if(this.mode==='guest')return this.gUpdate(dt);
@@ -1489,7 +1505,7 @@ const FourSq={id:'four',title:'Four Square',hint:'Tap a spot to hit, flick for p
         if(b.out)return this.out(b.from,'hit it out!');
         b.phase='up';b.u=0;b.vx=(b.tx-b.sx)/b.T*0.12;b.vy=(b.ty-b.sy)/b.T*0.12;
         if(!this.human(this.occ[b.to])){const [hx,hy]=this.home(b.to),q=this.sq(b.to),d=Math.min(1.4,Math.hypot(b.tx-hx,b.ty-hy)/(q.s/2));
-          b.cpuHit=Math.random()<(0.97-0.13*this.speed()-(b.mine?0.22*d*d+0.22*(b.pow-0.5):0))?rand(0.3,0.8)*b.win:-1}}}
+          const lvA={easy:-0.08,normal:0,hard:0.02}[store.get('four_lvl','normal')]||0;b.cpuHit=Math.random()<(Math.min(0.99,0.97+lvA)-(0.13+(lvA<0?0.1:0))*this.speed()-(b.mine?0.22*d*d+0.22*(b.pow-0.5):0))?rand(0.3,0.8)*b.win:-1}}}
     else{b.u+=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z=Math.sin(Math.min(1,b.u/b.win)*Math.PI)*Math.min(70,H*0.08);
       if(b.cpuHit>=0&&b.u>=b.cpuHit){const from=b.to,out=Math.random()<0.035+0.05*this.speed();if(this.isMP()&&!out)this.addPts(this.occ[from],1);if(this.done)return;this.launch(from,this.pickTarget(from),out,null,0.5,[b.x,b.y-b.z*0.3]);return}
       if(b.u>=b.win+b.grace){this.snd('two');this.out(b.to,'let it bounce twice!')}}
@@ -1645,6 +1661,7 @@ $('fCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('fGo').click()});
 $('fStart').onclick=()=>{Sfx.init();const F=FourSq;F.started=true;F.mode='host';F.played=false;
   NetHub.all({t:'go',seats:F.seats.map(s=>({n:s.n,h:s.h?'remote':null}))});start()};
 $('fCancel').onclick=()=>FourSq.openMenu();
+$('fHow').onclick=()=>openSheet('how','fMenu');$('fSet').onclick=()=>openSheet('settings','fMenu');
 
 
 /* ============ Menu ============ */
